@@ -24,8 +24,6 @@ func TestPrefixHashTable_AddAndMatch(t *testing.T) {
 }
 
 func TestPrefixHashTable_LRUEviction(t *testing.T) {
-	// Use a small cache to force eviction
-	DefaultMaxBlockNumber = 2
 	table := NewPrefixHashTable(nil)
 
 	token := []uint32{uint32(15496)}

@@ -1,17 +1,20 @@
 package kvindex
 
 import (
+	"strings"
+
 	"github.com/neuralmagic/distributed-kv-cache/pkg/utils"
 	"github.com/redis/go-redis/v9"
 	"golang.org/x/net/context"
-
-	"strings"
 )
 
 // KVBlockIndexer defines the interactions with the KVCache indexing backend.
 type KVBlockIndexer interface {
 	// GetPodsForKeys retrieves the pods for the given keys.
-	// It returns a map where the keys are KVBlockKey and the values are slices of pod names.
+	// It returns:
+	// 1. A slice of strings representing the keys.
+	// 2. A map where the keys are those in (1) and the values are pod names.
+	// 3. An error if any occurred during the operation.
 	GetPodsForKeys(ctx context.Context,
 		keys []KVBlockKey) ([]string, map[string]string, error)
 }
@@ -29,8 +32,15 @@ func NewRedisKVBlockIndexer(redisClient *redis.Client) *RedisKVBlockIndexer {
 }
 
 // GetPodsForKeys retrieves the pods for the given keys.
+// It returns:
+// 1. A slice of strings representing the keys.
+// 2. A map where the keys are those in (1) and the values are pod names.
+// 3. An error if any occurred during the operation.
+//
+//nolint:gocritic // no need named return values here
 func (r *RedisKVBlockIndexer) GetPodsForKeys(ctx context.Context,
-	keys []KVBlockKey) ([]string, map[string]string, error) {
+	keys []KVBlockKey,
+) ([]string, map[string]string, error) {
 	pods := make(map[string]string)
 
 	redisKeys := utils.SliceMap(keys, func(key KVBlockKey) string {

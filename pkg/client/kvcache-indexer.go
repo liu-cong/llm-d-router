@@ -2,12 +2,13 @@ package client
 
 import (
 	"context"
+	"fmt"
+	"os"
+
 	"k8s.io/klog/v2"
 
-	"fmt"
 	"github.com/neuralmagic/distributed-kv-cache/pkg/kvindex"
 	"github.com/neuralmagic/distributed-kv-cache/pkg/tokenization"
-	"os"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -18,6 +19,7 @@ type PodScore struct {
 	Score float64
 }
 
+// Config holds the configuration for the KVCacheIndex.
 type Config struct {
 	kvindex.LMCacheEngineConfig
 	kvindex.LMCacheEngineMetadata
@@ -25,6 +27,13 @@ type Config struct {
 	ScoringStrategy KVScoringStrategy
 }
 
+// KVCacheIndex abstracts the Distributed KVCache Indexing module.
+type KVCacheIndex interface {
+	Run(ctx context.Context)
+	GetPodScores(ctx context.Context, prompt, modelName string) ([]PodScore, error)
+}
+
+// KVCacheIndexer is a concrete implementation of the KVCacheIndex interface.
 type KVCacheIndexer struct {
 	tokensIndexer   tokenization.Indexer   // gets tokens for a prompt
 	tokensProcessor kvindex.TokenProcessor // turns tokens to kv block keys
@@ -34,9 +43,12 @@ type KVCacheIndexer struct {
 	tokenizersPool *tokenization.Pool
 }
 
-// NewKVCacheIndexer creates a KVCacheIndexer with default scorer and config.
-func NewKVCacheIndexer(cfg Config) (*KVCacheIndexer, error) {
-	scorer, _ := NewKVBlockScorer(cfg.ScoringStrategy)
+// NewKVCacheIndexer creates a KVCacheIndex given a Config.
+func NewKVCacheIndexer(cfg Config) (KVCacheIndex, error) {
+	scorer, err := NewKVBlockScorer(cfg.ScoringStrategy)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create KVBlockScorer: %w", err)
+	}
 
 	// TODO: move somewhere else
 	redisClient := redis.NewClient(&redis.Options{
@@ -45,9 +57,9 @@ func NewKVCacheIndexer(cfg Config) (*KVCacheIndexer, error) {
 		DB:       0,                           // use default DB
 	})
 
-	_, err := redisClient.Ping(context.Background()).Result()
+	_, err = redisClient.Ping(context.Background()).Result()
 	if err != nil {
-		return nil, fmt.Errorf("could not connect to Redis: %v", err)
+		return nil, fmt.Errorf("could not connect to Redis: %w", err)
 	}
 
 	tokensIndexer := tokenization.NewContainedTokenStore()
@@ -75,13 +87,6 @@ func (k *KVCacheIndexer) GetPodScores(ctx context.Context, prompt, modelName str
 	if len(tokens) == 0 {
 		return nil, nil
 	}
-
-	/*
-		tokens, _, err := tokenization.NewHFTokenizer().Encode(prompt, modelName)
-		if err != nil {
-			return nil, fmt.Errorf("failed to encode prompt: %w", err)
-		}
-	*/
 
 	// 2. get block keys
 	blockKeys := k.tokensProcessor.TokensToKVBlockKeys(tokens, modelName)

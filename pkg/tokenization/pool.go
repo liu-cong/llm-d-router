@@ -59,7 +59,7 @@ func (pool *Pool) Run(ctx context.Context) {
 }
 
 // workerLoop is the main processing loop for each worker.
-func (pool *Pool) workerLoop(workerID int) {
+func (pool *Pool) workerLoop(_ int) {
 	defer pool.wg.Done()
 	for {
 		task, shutdown := pool.queue.Get()

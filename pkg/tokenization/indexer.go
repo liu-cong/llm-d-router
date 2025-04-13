@@ -1,24 +1,27 @@
 package tokenization
 
 import (
-	"github.com/daulet/tokenizers"
 	"sync"
+
+	"github.com/daulet/tokenizers"
 )
 
 // Indexer interface defines the methods for managing tokenization data.
 // It allows looking up the longest tokenization prefix for a given
-// model name and prompt.
+// model-name and prompt.
 type Indexer interface {
 	// AddFullTokenization adds the full tokenization of a string to the
 	// indexer for a given model.
 	AddFullTokenization(modelName string, text string, tokens []uint32, offsets []tokenizers.Offset)
 	// FindLongestContainedTokens finds the sequence of contained tokens for
 	// the longest matching prefix.
-	FindLongestContainedTokens(prompt string, modelName string) []uint32
+	FindLongestContainedTokens(prompt, modelName string) []uint32
 }
 
 // ContainedTokenStore manages a collection of containedTokenTrie,
 // one for each model.
+// A containedTokenTrie is a character-based prefix tree that stores
+// the last token fully contained within the prefix ending at each node.
 type ContainedTokenStore struct {
 	mu    sync.RWMutex
 	tries map[string]*containedTokenTrie // Key: modelName
@@ -34,7 +37,8 @@ func NewContainedTokenStore() Indexer {
 // AddFullTokenization adds the full tokenization of a string to the indexer for
 // a given model. This is called by the async worker.
 func (s *ContainedTokenStore) AddFullTokenization(modelName string, text string, tokens []uint32,
-	offsets []tokenizers.Offset) {
+	offsets []tokenizers.Offset,
+) {
 	if text == "" || len(tokens) == 0 || len(tokens) != len(offsets) {
 		return
 	}
@@ -51,7 +55,7 @@ func (s *ContainedTokenStore) AddFullTokenization(modelName string, text string,
 
 // FindLongestContainedTokens finds the sequence of contained tokens for the
 // longest matching prefix.
-func (s *ContainedTokenStore) FindLongestContainedTokens(prompt string, modelName string) []uint32 {
+func (s *ContainedTokenStore) FindLongestContainedTokens(prompt, modelName string) []uint32 {
 	s.mu.RLock()
 	trie, ok := s.tries[modelName]
 	s.mu.RUnlock()
@@ -127,7 +131,8 @@ func (t *containedTokenTrie) addFullTokenization(text string, tokens []uint32, o
 	}
 
 	for i, char := range text {
-		charEndPos := uint(i + 1)
+		//nolint:gosec // when models reach uint32 size of context window, none of us will be needed here
+		charEndPos := uint(i) + 1
 
 		// Find the largest token index 'k' such that offsets[k][1] <= charEndPos
 		// We can continue searching forward from the previously found k

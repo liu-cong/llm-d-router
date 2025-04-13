@@ -25,7 +25,7 @@ type Config struct {
 }
 
 // PrefixHashTable is an in-memory prefix-to-block cache with xxhash keys and LRU eviction.
-// TODO: see if can use
+// TODO: use instead of trie indexer.
 type PrefixHashTable struct {
 	mu        sync.RWMutex
 	seed      uint64
