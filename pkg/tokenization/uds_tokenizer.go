@@ -18,6 +18,7 @@ package tokenization
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -185,8 +186,24 @@ func (u *UdsTokenizer) initializeTokenizerForModel(ctx context.Context) error {
 	return fmt.Errorf("tokenizer initialization failed after %d attempts: %w", maxRetries, lastErr)
 }
 
+// Render tokenizes a plain-text prompt via the UDS renderer service.
 func (u *UdsTokenizer) Render(prompt string) ([]uint32, []types.Offset, error) {
-	return u.Encode(prompt, true)
+	ctx, cancel := context.WithTimeout(context.Background(), defaultTimeout)
+	defer cancel()
+
+	resp, err := u.client.RenderCompletion(ctx, &tokenizerpb.RenderCompletionRequest{
+		ModelName: u.model,
+		Prompt:    prompt,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("gRPC RenderCompletion request failed: %w", err)
+	}
+
+	if !resp.Success {
+		return nil, nil, fmt.Errorf("render completion failed: %s", resp.ErrorMessage)
+	}
+
+	return resp.TokenIds, nil, nil
 }
 
 // Encode tokenizes the input string and returns the token IDs and offsets.
@@ -228,7 +245,9 @@ func (u *UdsTokenizer) Encode(prompt string, addSpecialTokens bool) ([]uint32, [
 	return resp.InputIds, tokenizersOffsets, nil
 }
 
-// RenderChat renders a chat template using the UDS tokenizer service.
+// RenderChat renders a chat completion request using the UDS renderer service.
+// It calls the RenderChatCompletion RPC which runs vLLM's OpenAIServingRender
+// on the CPU, returning token IDs directly.
 func (u *UdsTokenizer) RenderChat(
 	renderReq *types.RenderChatRequest,
 ) ([]uint32, []types.Offset, error) {
@@ -256,90 +275,54 @@ func (u *UdsTokenizer) RenderChat(
 				}
 				parts = append(parts, part)
 			}
-			pbMsg.Content = &tokenizerpb.ChatMessage_Parts{Parts: &tokenizerpb.ContentPartList{Parts: parts}}
+			pbMsg.ContentParts = parts
 		} else {
-			text := msg.Content.Raw
-			pbMsg.Content = &tokenizerpb.ChatMessage_Text{Text: text}
+			content := msg.Content.Raw
+			pbMsg.Content = &content
 		}
 		messages = append(messages, pbMsg)
 	}
-	conversationTurns := []*tokenizerpb.ConversationTurn{
-		{Messages: messages},
+
+	// Convert tools to JSON string
+	var toolsJSON *string
+	if len(renderReq.Tools) > 0 {
+		b, err := json.Marshal(renderReq.Tools)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to marshal tools: %w", err)
+		}
+		s := string(b)
+		toolsJSON = &s
 	}
 
-	// Convert ChatTemplateKWArgs
-	chatTemplateKwargs := make(map[string]*tokenizerpb.Value)
-	for k, v := range renderReq.ChatTemplateKWArgs {
-		chatTemplateKwargs[k] = ConvertToProtoValue(v)
+	// Convert ChatTemplateKWArgs to JSON string
+	var chatTemplateKwargsJSON *string
+	if len(renderReq.ChatTemplateKWArgs) > 0 {
+		b, err := json.Marshal(renderReq.ChatTemplateKWArgs)
+		if err != nil {
+			return nil, nil, fmt.Errorf("failed to marshal chat_template_kwargs: %w", err)
+		}
+		s := string(b)
+		chatTemplateKwargsJSON = &s
 	}
 
-	req := &tokenizerpb.ChatTemplateRequest{
-		ConversationTurns:         conversationTurns,
-		ChatTemplate:              renderReq.ChatTemplate,
-		ReturnAssistantTokensMask: renderReq.ReturnAssistantTokensMask,
-		ContinueFinalMessage:      renderReq.ContinueFinalMessage,
-		AddGenerationPrompt:       renderReq.AddGenerationPrompt,
-		ChatTemplateKwargs:        chatTemplateKwargs,
-		ModelName:                 u.model,
-	}
-
-	resp, err := u.client.RenderChatTemplate(ctx, req)
+	resp, err := u.client.RenderChatCompletion(ctx, &tokenizerpb.RenderChatCompletionRequest{
+		ModelName:            u.model,
+		Messages:             messages,
+		ToolsJson:            toolsJSON,
+		ChatTemplate:         renderReq.ChatTemplate,
+		AddGenerationPrompt:  &renderReq.AddGenerationPrompt,
+		ContinueFinalMessage: renderReq.ContinueFinalMessage,
+		ChatTemplateKwargs:   chatTemplateKwargsJSON,
+	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("gRPC chat-template request failed: %w", err)
+		return nil, nil, fmt.Errorf("gRPC RenderChatCompletion request failed: %w", err)
 	}
 
 	if !resp.Success {
-		return nil, nil, fmt.Errorf("chat template rendering failed: %s", resp.ErrorMessage)
+		return nil, nil, fmt.Errorf("render chat completion failed: %s", resp.ErrorMessage)
 	}
 
-	return u.Encode(resp.RenderedPrompt, false)
-}
-
-// ConvertToProtoValue converts a Go interface{} value to a protobuf Value.
-// It handles common types including strings, numbers, booleans, slices, and maps.
-// Unrecognized types are converted to string representation.
-func ConvertToProtoValue(v interface{}) *tokenizerpb.Value {
-	if v == nil {
-		return &tokenizerpb.Value{
-			Value: &tokenizerpb.Value_StringValue{StringValue: ""},
-		}
-	}
-
-	switch val := v.(type) {
-	case string:
-		return &tokenizerpb.Value{
-			Value: &tokenizerpb.Value_StringValue{StringValue: val},
-		}
-	case float64:
-		return &tokenizerpb.Value{
-			Value: &tokenizerpb.Value_NumberValue{NumberValue: val},
-		}
-	case bool:
-		return &tokenizerpb.Value{
-			Value: &tokenizerpb.Value_BoolValue{BoolValue: val},
-		}
-	case []interface{}:
-		listValues := make([]*tokenizerpb.Value, len(val))
-		for i, item := range val {
-			listValues[i] = ConvertToProtoValue(item)
-		}
-		return &tokenizerpb.Value{
-			Value: &tokenizerpb.Value_ListValue{ListValue: &tokenizerpb.ListValue{Values: listValues}},
-		}
-	case map[string]interface{}:
-		structValues := make(map[string]*tokenizerpb.Value)
-		for k, v := range val {
-			structValues[k] = ConvertToProtoValue(v)
-		}
-		return &tokenizerpb.Value{
-			Value: &tokenizerpb.Value_StructValue{StructValue: &tokenizerpb.StructValue{Fields: structValues}},
-		}
-	default:
-		// For unrecognized types, convert to string
-		return &tokenizerpb.Value{
-			Value: &tokenizerpb.Value_StringValue{StringValue: fmt.Sprintf("%v", val)},
-		}
-	}
+	return resp.TokenIds, nil, nil
 }
 
 func (u *UdsTokenizer) Type() string {
