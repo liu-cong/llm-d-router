@@ -44,7 +44,7 @@ func makeTestEndpointBase() scheduling.Endpoint {
 
 func makeTestEndpoint(cachedTokens int) scheduling.Endpoint {
 	ep := makeTestEndpointBase()
-	ep.Put(attrprefix.PrefixCacheMatchInfoKey,
+	ep.Put(attrprefix.PrefixCacheMatchInfoDataKey.String(),
 		attrprefix.NewPrefixCacheMatchInfo(cachedTokens, testTotalTokens, testBlockSize))
 	return ep
 }
@@ -291,7 +291,7 @@ func TestDisaggregateWrongPrefixInfoType(t *testing.T) {
 	ctx := utils.NewTestContext(t)
 
 	ep := makeTestEndpointBase()
-	ep.Put(attrprefix.PrefixCacheMatchInfoKey, &notPrefixCacheMatchInfo{})
+	ep.Put(attrprefix.PrefixCacheMatchInfoDataKey.String(), &notPrefixCacheMatchInfo{})
 
 	decider, err := NewPrefixBasedPDDecider(PrefixBasedPDDeciderConfig{NonCachedTokens: 5})
 	require.NoError(t, err)
@@ -307,7 +307,7 @@ func TestConsumes(t *testing.T) {
 	require.NoError(t, err)
 
 	consumed := handler.Consumes()
-	assert.Contains(t, consumed, attrprefix.PrefixCacheMatchInfoKey)
+	assert.Contains(t, consumed, attrprefix.PrefixCacheMatchInfoDataKey)
 }
 
 func TestWithName(t *testing.T) {

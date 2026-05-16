@@ -53,10 +53,10 @@ const (
 	// Deprecated: use PluginType ("token-producer") instead.
 	LegacyPluginType = "tokenizer"
 
-	// TokenizedPromptKey is the data key advertised by this plugin to indicate
-	// that it produces tokenized prompt data on InferenceRequestBody.TokenizedPrompt.
-	TokenizedPromptKey = "TokenizedPrompt"
+	tokenizedPromptKeyID = "TokenizedPrompt"
 )
+
+var TokenizedPromptDataKey = plugin.NewBaseDataKey(tokenizedPromptKeyID, PluginType)
 
 // tokenizerPluginConfig holds the configuration for the tokenizer plugin.
 //
@@ -162,8 +162,8 @@ func (p *Plugin) WithName(name string) *Plugin {
 }
 
 // Produces returns the data keys this plugin produces.
-func (p *Plugin) Produces() map[string]any {
-	return map[string]any{TokenizedPromptKey: fwkrh.TokenizedPrompt{}}
+func (p *Plugin) Produces() map[plugin.DataKey]any {
+	return map[plugin.DataKey]any{TokenizedPromptDataKey: fwkrh.TokenizedPrompt{}}
 }
 
 // Produce tokenizes the request prompt and stores the result on

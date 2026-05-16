@@ -101,15 +101,17 @@ func (d *detector) TypedName() fwkplugin.TypedName {
 	return d.typedName
 }
 
-func (d *detector) Consumes() map[string]any {
-	return map[string]any{
-		attrconcurrency.InFlightLoadKey: attrconcurrency.InFlightLoad{},
+func (d *detector) Consumes() map[fwkplugin.DataKey]any {
+	return map[fwkplugin.DataKey]any{
+		attrconcurrency.InFlightLoadDataKey: attrconcurrency.InFlightLoad{},
 	}
 }
 
 func (d *detector) getLoad(m datalayer.AttributeMap) *attrconcurrency.InFlightLoad {
-	if val, ok := datalayer.ReadAttribute[*attrconcurrency.InFlightLoad](m, attrconcurrency.InFlightLoadKey); ok {
-		return val
+	if val, ok := m.Get(attrconcurrency.InFlightLoadDataKey.String()); ok {
+		if load, ok := val.(*attrconcurrency.InFlightLoad); ok {
+			return load
+		}
 	}
 
 	return &attrconcurrency.InFlightLoad{}

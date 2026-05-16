@@ -30,11 +30,12 @@ import (
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/requestcontrol"
 	fwksched "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/scheduling"
 	attrprefix "github.com/llm-d/llm-d-router/pkg/epp/framework/plugins/datalayer/attribute/prefix"
+	approxprefixconstants "github.com/llm-d/llm-d-router/pkg/epp/framework/plugins/requestcontrol/dataproducer/approximateprefix/constants"
 	"github.com/llm-d/llm-d-router/pkg/epp/metrics"
 )
 
 const (
-	ApproxPrefixCachePluginType = "approx-prefix-cache-producer"
+	ApproxPrefixCachePluginType = approxprefixconstants.ApproxPrefixCachePluginType
 )
 
 var (
@@ -56,9 +57,16 @@ func (p *dataProducer) TypedName() plugin.TypedName {
 	return p.typedName
 }
 
+// WithName sets the name of the plugin instance.
+func (p *dataProducer) WithName(name string) *dataProducer {
+	p.typedName.Name = name
+	return p
+}
+
 // Produces returns the data produced by the plugin.
-func (p *dataProducer) Produces() map[string]any {
-	return map[string]any{attrprefix.PrefixCacheMatchInfoKey: attrprefix.PrefixCacheMatchInfo{}}
+func (p *dataProducer) Produces() map[plugin.DataKey]any {
+	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(p.typedName.Name)
+	return map[plugin.DataKey]any{key: attrprefix.PrefixCacheMatchInfo{}}
 }
 
 // newDataProducer returns a new DataProducer plugin.
@@ -142,9 +150,10 @@ func (p *dataProducer) Produce(ctx context.Context, request *fwksched.InferenceR
 	total := len(hashes)
 	prefixCacheServers := p.matchLongestPrefix(ctx, hashes)
 
+	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(p.typedName.Name)
 	for _, pod := range pods {
 		matchLen := prefixCacheServers[ServerID(pod.GetMetadata().NamespacedName)]
-		pod.Put(attrprefix.PrefixCacheMatchInfoKey, attrprefix.NewPrefixCacheMatchInfo(matchLen, total, blockSize))
+		pod.Put(key.String(), attrprefix.NewPrefixCacheMatchInfo(matchLen, total, blockSize))
 	}
 
 	state := &SchedulingContextState{
@@ -153,8 +162,8 @@ func (p *dataProducer) Produce(ctx context.Context, request *fwksched.InferenceR
 	}
 
 	// Store the state in shared plugin state for later use in PreRequest.
-	// NOTE: We use the prefix plugin's type name as part of the key so that the scorer can read it.
-	p.pluginState.Write(request.RequestID, plugin.StateKey(ApproxPrefixCachePluginType), state)
+	// NOTE: We use the prefix plugin's name as part of the key so that multiple instances avoid collisions.
+	p.pluginState.Write(request.RequestID, plugin.StateKey(p.typedName.Name), state)
 
 	return nil
 }
@@ -178,7 +187,7 @@ func (p *dataProducer) PreRequest(ctx context.Context, request *fwksched.Inferen
 	}
 
 	// Read state saved during Produce.
-	state, err := plugin.ReadPluginStateKey[*SchedulingContextState](p.pluginState, request.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
+	state, err := plugin.ReadPluginStateKey[*SchedulingContextState](p.pluginState, request.RequestID, plugin.StateKey(p.typedName.Name))
 	if err != nil {
 		log.FromContext(ctx).Error(err, "failed to read prefix plugin state", "requestID", request.RequestID)
 		return
@@ -257,6 +266,10 @@ func ApproxPrefixCacheFactory(name string, rawParameters json.RawMessage, handle
 	p, err := newDataProducer(handle.Context(), parameters, handle)
 	if err != nil {
 		return nil, err
+	}
+
+	if name != "" {
+		p = p.WithName(name)
 	}
 
 	return p, nil

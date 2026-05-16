@@ -260,6 +260,8 @@ func (r *Runner) setup(ctx context.Context, cfg *rest.Config, opts *runserver.Op
 		setupLog.Error(err, "Failed to parse configuration")
 		return nil, nil, err
 	}
+	setupLog.Info("Raw config after phase one", "config", rawConfig)
+
 	useNewMetrics := !r.featureGates[datalayer.EnableLegacyMetricsFeatureGate]
 	epf := r.setupMetricsCollection(useNewMetrics, opts, pmc)
 	gknn, err := extractGKNN(opts.PoolName, opts.PoolGroup, opts.PoolNamespace, opts.EndpointSelector)
@@ -286,6 +288,7 @@ func (r *Runner) setup(ctx context.Context, cfg *rest.Config, opts *runserver.Op
 		setupLog.Error(err, "Failed to parse configuration")
 		return nil, nil, err
 	}
+	setupLog.Info("EPP config after phase two", "config", eppConfig)
 
 	// --- Setup Metrics Server ---
 	r.customCollectors = append(r.customCollectors, collectors.NewInferencePoolMetricsCollector(ds))
@@ -524,11 +527,17 @@ func (r *Runner) registerInTreePlugins() {
 	fwkplugin.Register(usagelimits.StaticUsageLimitPolicyType, usagelimits.StaticPolicyFactory)
 
 	// Register Request level data producer plugins as defaults for their respective data keys.
+<<<<<<< HEAD
 	fwkplugin.RegisterAsDefaultProducer(reqdataprodprefix.ApproxPrefixCachePluginType, reqdataprodprefix.ApproxPrefixCacheFactory, attrprefix.PrefixCacheMatchInfoKey)
 	fwkplugin.RegisterAsDefaultProducer(inflightload.InFlightLoadProducerType, inflightload.InFlightLoadProducerFactory, attrconcurrency.InFlightLoadKey)
 	fwkplugin.RegisterAsDefaultProducer(latencyproducer.LatencyDataProviderPluginType, latencyproducer.PredictedLatencyFactory, attrlatency.LatencyPredictionInfoKey)
 	fwkplugin.Register(tokenizer.PluginType, tokenizer.PluginFactory)
 	fwkplugin.Register(tokenizer.LegacyPluginType, tokenizer.LegacyPluginFactory) //nolint:staticcheck // intentional: keep backward compatibility
+=======
+	fwkplugin.RegisterAsDefaultProducer(reqdataprodprefix.ApproxPrefixCachePluginType, reqdataprodprefix.ApproxPrefixCacheFactory, attrprefix.PrefixCacheMatchInfoDataKey)
+	fwkplugin.RegisterAsDefaultProducer(inflightload.InFlightLoadProducerType, inflightload.InFlightLoadProducerFactory, attrconcurrency.InFlightLoadDataKey)
+	fwkplugin.RegisterAsDefaultProducer(latencyproducer.LatencyDataProviderPluginType, latencyproducer.PredictedLatencyFactory, attrlatency.LatencyPredictionInfoDataKey)
+>>>>>>> 7f4b9ada (Add producer name (defualt to the producer type) to producer/consumer DataKey.)
 
 	// Latency predictor plugins
 	fwkplugin.Register(latencyslo.LatencyAdmissionPluginType, latencyslo.LatencyAdmissionFactory)
@@ -637,7 +646,7 @@ func (r *Runner) parseConfigurationPhaseTwo(ctx context.Context, rawConfig *conf
 
 	// Auto-create any DataProducer plugins that are needed by consumers already in
 	// the config but not yet satisfied by an existing producer.
-	dataProducers, err := datalayer.CreateMissingDataProducers(handle.GetAllPlugins(), fwkplugin.DefaultProducerRegistry, fwkplugin.Registry, handle)
+	dataProducers, err := datalayer.CreateMissingDataProducers(ctx, handle.GetAllPlugins(), fwkplugin.DefaultProducerRegistry, fwkplugin.Registry, handle)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create missing data producers - %w", err)
 	}

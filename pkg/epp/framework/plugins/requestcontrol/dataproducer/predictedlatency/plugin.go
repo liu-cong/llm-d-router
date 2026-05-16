@@ -39,12 +39,13 @@ import (
 	fwkdl "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/datalayer"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin"
 	fwksched "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/scheduling"
+	latencyproducerconstants "github.com/llm-d/llm-d-router/pkg/epp/framework/plugins/requestcontrol/dataproducer/predictedlatency/constants"
 )
 
 const (
 	// LatencyDataProviderPluginType is the plugin type for the latency predictor.
 	// It trains XGBoost models via the sidecar and generates predictions for scoring.
-	LatencyDataProviderPluginType = "predicted-latency-producer"
+	LatencyDataProviderPluginType = latencyproducerconstants.LatencyDataProviderPluginType
 
 	// TTFTSLOHeaderKey is the header key for the TTFT SLO.
 	TTFTSLOHeaderKey = "x-slo-ttft-ms"

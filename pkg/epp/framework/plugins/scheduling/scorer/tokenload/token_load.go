@@ -75,9 +75,9 @@ func (s *TokenLoadScorer) Category() fwksched.ScorerCategory {
 	return fwksched.Distribution
 }
 
-func (s *TokenLoadScorer) Consumes() map[string]any {
-	return map[string]any{
-		attrconcurrency.InFlightLoadKey: attrconcurrency.InFlightLoad{},
+func (s *TokenLoadScorer) Consumes() map[fwkplugin.DataKey]any {
+	return map[fwkplugin.DataKey]any{
+		attrconcurrency.InFlightLoadDataKey: attrconcurrency.InFlightLoad{},
 	}
 }
 
@@ -89,7 +89,7 @@ func (s *TokenLoadScorer) Score(ctx context.Context, _ *fwksched.CycleState, _ *
 		endpointID := endpoint.GetMetadata().NamespacedName.String()
 		tokenLoad := 0.0
 
-		if val, ok := endpoint.Get(attrconcurrency.InFlightLoadKey); ok {
+		if val, ok := endpoint.Get(attrconcurrency.InFlightLoadDataKey.String()); ok {
 			if load, ok := val.(*attrconcurrency.InFlightLoad); ok {
 				tokenLoad = float64(load.Tokens)
 			}

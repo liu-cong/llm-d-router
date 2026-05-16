@@ -37,10 +37,10 @@ func makeEndpoint(name string, prefixMatch int, ttft float64) fwksched.Endpoint 
 	}
 	ep := fwksched.NewEndpoint(meta, &fwkdl.Metrics{}, fwkdl.NewAttributes())
 	if prefixMatch >= 0 {
-		ep.Put(attrprefix.PrefixCacheMatchInfoKey, attrprefix.NewPrefixCacheMatchInfo(prefixMatch, 100, 16))
+		ep.Put(attrprefix.PrefixCacheMatchInfoDataKey.String(), attrprefix.NewPrefixCacheMatchInfo(prefixMatch, 100, 16))
 	}
 	if ttft >= 0 {
-		ep.Put(attrlatency.LatencyPredictionInfoKey, attrlatency.NewLatencyPredictionInfo(true, true, 0, 0, ttft, 0, 0))
+		ep.Put(attrlatency.LatencyPredictionInfoDataKey.String(), attrlatency.NewLatencyPredictionInfo(true, true, 0, 0, ttft, 0, 0))
 	}
 	return ep
 }

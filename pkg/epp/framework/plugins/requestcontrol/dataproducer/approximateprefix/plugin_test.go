@@ -72,8 +72,9 @@ func TestProduce(t *testing.T) {
 	assert.Equal(t, 2, len(state.PrefixHashes)) // "aaaabbbb" with blockSize 4 (1 token * 4 chars) -> 2 blocks
 
 	// Verify pod match info was set (should be 0 match since indexer is empty)
+	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(ApproxPrefixCachePluginType).String()
 	for _, ep := range endpoints {
-		info, ok := ep.Get(attrprefix.PrefixCacheMatchInfoKey)
+		info, ok := ep.Get(key)
 		assert.True(t, ok)
 		prefixInfo := info.(*attrprefix.PrefixCacheMatchInfo)
 		assert.Equal(t, 0, prefixInfo.MatchBlocks())
@@ -209,19 +210,20 @@ func TestPrefixPluginCompletion(t *testing.T) {
 	}
 	_ = p.Produce(context.Background(), req3, endpoints)
 
+	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(ApproxPrefixCachePluginType).String()
 	// Verify pod1 has the correct prefix match info
-	info1, _ := endpoint1.Get(attrprefix.PrefixCacheMatchInfoKey)
+	info1, _ := endpoint1.Get(key)
 	prefixInfo1 := info1.(*attrprefix.PrefixCacheMatchInfo)
 	assert.Equal(t, 1, prefixInfo1.MatchBlocks()) // one block ("aaaa") matches
 	assert.Equal(t, 2, prefixInfo1.TotalBlocks()) // "aaaabbbb" -> 2 blocks
 
 	// Verify pod3 (prefill node) also has the match
-	info3, _ := endpoint3.Get(attrprefix.PrefixCacheMatchInfoKey)
+	info3, _ := endpoint3.Get(key)
 	prefixInfo3 := info3.(*attrprefix.PrefixCacheMatchInfo)
 	assert.Equal(t, 1, prefixInfo3.MatchBlocks())
 
 	// Verify pod2 has no match info
-	info2, _ := endpoint2.Get(attrprefix.PrefixCacheMatchInfoKey)
+	info2, _ := endpoint2.Get(key)
 	prefixInfo2 := info2.(*attrprefix.PrefixCacheMatchInfo)
 	assert.Equal(t, 0, prefixInfo2.MatchBlocks())
 }
@@ -286,7 +288,8 @@ func TestPrefixPluginChatCompletionsGrowth(t *testing.T) {
 	extendedHashCount := len(state2.PrefixHashes)
 	assert.Greater(t, extendedHashCount, initialHashCount)
 
-	info, _ := endpoint1.Get(attrprefix.PrefixCacheMatchInfoKey)
+	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(ApproxPrefixCachePluginType).String()
+	info, _ := endpoint1.Get(key)
 	prefixInfo := info.(*attrprefix.PrefixCacheMatchInfo)
 	assert.Greater(t, prefixInfo.MatchBlocks(), 0, "should have prefix cache hit")
 	assert.Equal(t, extendedHashCount, prefixInfo.TotalBlocks())
@@ -357,7 +360,8 @@ func TestPrefixPluginChatCompletionsMultimodalSameUrlMatches(t *testing.T) {
 		},
 	}
 	_ = p.Produce(context.Background(), req2, endpoints)
-	info, _ := endpoint1.Get(attrprefix.PrefixCacheMatchInfoKey)
+	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(ApproxPrefixCachePluginType).String()
+	info, _ := endpoint1.Get(key)
 	prefixInfo := info.(*attrprefix.PrefixCacheMatchInfo)
 
 	// Since same prefix hashes are expected to be generated
@@ -431,7 +435,8 @@ func TestPrefixPluginChatCompletionsMultimodalDifferentUrlPartialMatch(t *testin
 		},
 	}
 	_ = p.Produce(context.Background(), req2, endpoints)
-	info, _ := endpoint1.Get(attrprefix.PrefixCacheMatchInfoKey)
+	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(ApproxPrefixCachePluginType).String()
+	info, _ := endpoint1.Get(key)
 	prefixInfo := info.(*attrprefix.PrefixCacheMatchInfo)
 	// Not a full cache hit as the image url has changed
 	assert.Less(t, prefixInfo.MatchBlocks(), prefixInfo.TotalBlocks(), "should not have full prefix cache hit")

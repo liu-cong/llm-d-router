@@ -129,9 +129,9 @@ func (s *ActiveRequest) Category() scheduling.ScorerCategory {
 }
 
 // Consumes returns the in-flight load attribute required for scoring.
-func (s *ActiveRequest) Consumes() map[string]any {
-	return map[string]any{
-		attrconcurrency.InFlightLoadKey: attrconcurrency.InFlightLoad{},
+func (s *ActiveRequest) Consumes() map[plugin.DataKey]any {
+	return map[plugin.DataKey]any{
+		attrconcurrency.InFlightLoadDataKey: attrconcurrency.InFlightLoad{},
 	}
 }
 
@@ -173,7 +173,7 @@ func (s *ActiveRequest) Score(ctx context.Context, _ *scheduling.CycleState, _ *
 }
 
 func requestCount(ctx context.Context, endpoint scheduling.Endpoint) int64 {
-	val, ok := endpoint.Get(attrconcurrency.InFlightLoadKey)
+	val, ok := endpoint.Get(attrconcurrency.InFlightLoadDataKey.String())
 	if !ok {
 		return 0
 	}

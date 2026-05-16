@@ -49,9 +49,9 @@ func TestTokenLoadScorer(t *testing.T) {
 
 	// pod1: 0 tokens (default)
 	// pod2: 500 tokens
-	endpoints[1].Put(attrconcurrency.InFlightLoadKey, &attrconcurrency.InFlightLoad{Tokens: 500})
+	endpoints[1].Put(attrconcurrency.InFlightLoadDataKey.String(), &attrconcurrency.InFlightLoad{Tokens: 500})
 	// pod3: 1000 tokens
-	endpoints[2].Put(attrconcurrency.InFlightLoadKey, &attrconcurrency.InFlightLoad{Tokens: 1000})
+	endpoints[2].Put(attrconcurrency.InFlightLoadDataKey.String(), &attrconcurrency.InFlightLoad{Tokens: 1000})
 
 	scores := scorer.Score(context.Background(), fwksched.NewCycleState(), &fwksched.InferenceRequest{}, endpoints)
 

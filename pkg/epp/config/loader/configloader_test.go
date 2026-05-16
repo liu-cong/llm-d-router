@@ -625,11 +625,6 @@ func TestInstantiateAndConfigure(t *testing.T) {
 			configText: errorParserWrongPluginNameText,
 			wantErr:    true,
 		},
-		{
-			name:       "Error - Undefined Saturation Detector Plugin",
-			configText: errorUndefinedSaturationDetectorPluginText,
-			wantErr:    true,
-		},
 	}
 
 	for _, tc := range tests {
@@ -843,6 +838,8 @@ func registerTestPlugins(t *testing.T) {
 	fwkplugin.Register(single.SingleProfileHandlerType, single.SingleProfileHandlerFactory)
 	fwkplugin.Register(openai.OpenAIParserType, openai.OpenAIParserPluginFactory)
 	fwkplugin.Register(usagelimits.StaticUsageLimitPolicyType, usagelimits.StaticPolicyFactory)
+	fwkplugin.Register(prefix.PrefixCacheScorerPluginType, prefix.PrefixCachePluginFactory)
+	fwkplugin.Register(reqdataprodprefix.ApproxPrefixCachePluginType, reqdataprodprefix.ApproxPrefixCacheFactory)
 	// Datalayer plugins are now defaults; register their real factories.
 	fwkplugin.Register(sourcemetrics.MetricsDataSourceType, sourcemetrics.MetricsDataSourceFactory)
 	fwkplugin.Register(extractormetrics.MetricsExtractorType, extractormetrics.CoreMetricsExtractorFactory)

@@ -129,8 +129,8 @@ type PdProfileHandler struct {
 }
 
 // Consumes defines data types consumed by this plugin (through the PD decider).
-func (*PdProfileHandler) Consumes() map[string]any {
-	return map[string]any{attrprefix.PrefixCacheMatchInfoKey: attrprefix.PrefixCacheMatchInfo{}}
+func (*PdProfileHandler) Consumes() map[plugin.DataKey]any {
+	return map[plugin.DataKey]any{attrprefix.PrefixCacheMatchInfoDataKey: attrprefix.PrefixCacheMatchInfo{}}
 }
 
 // TypedName returns the typed name of the plugin.

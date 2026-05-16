@@ -31,10 +31,11 @@ func TestProducesConsumes(t *testing.T) {
 	pl := NewPredictedLatency(DefaultConfig, nil)
 
 	produces := pl.Produces()
-	assert.Contains(t, produces, attrlatency.LatencyPredictionInfoKey)
+	expectedProduceKey := attrlatency.LatencyPredictionInfoDataKey.WithNonEmptyProducerName(pl.TypedName().Name)
+	assert.Contains(t, produces, expectedProduceKey)
 
 	consumes := pl.Consumes()
-	assert.Contains(t, consumes, attrprefix.PrefixCacheMatchInfoKey)
+	assert.Contains(t, consumes, attrprefix.PrefixCacheMatchInfoDataKey)
 }
 
 // TestProduce_CancelledContextDoesNotPublish verifies that when the

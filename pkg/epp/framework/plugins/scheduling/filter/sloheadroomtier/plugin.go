@@ -90,7 +90,7 @@ func (p *Plugin) Filter(ctx context.Context, _ *fwksched.CycleState, _ *fwksched
 
 	var positive, negative, noPrediction []fwksched.Endpoint
 	for _, ep := range endpoints {
-		raw, ok := ep.Get(attrlatency.LatencyPredictionInfoKey)
+		raw, ok := ep.Get(attrlatency.LatencyPredictionInfoDataKey.String())
 		if !ok {
 			noPrediction = append(noPrediction, ep)
 			continue
@@ -137,8 +137,8 @@ func (p *Plugin) Filter(ctx context.Context, _ *fwksched.CycleState, _ *fwksched
 	}
 }
 
-func (p *Plugin) Consumes() map[string]any {
-	return map[string]any{
-		attrlatency.LatencyPredictionInfoKey: attrlatency.LatencyPredictionInfo{},
+func (p *Plugin) Consumes() map[fwkplugin.DataKey]any {
+	return map[fwkplugin.DataKey]any{
+		attrlatency.LatencyPredictionInfoDataKey: attrlatency.LatencyPredictionInfo{},
 	}
 }

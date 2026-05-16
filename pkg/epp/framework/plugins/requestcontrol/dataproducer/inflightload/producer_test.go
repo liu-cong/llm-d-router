@@ -53,7 +53,8 @@ func TestInFlightLoadProducer_Produce(t *testing.T) {
 	require.NoError(t, err)
 
 	// Verify AttributeMap population
-	val, ok := endpoints[0].Get(attrconcurrency.InFlightLoadKey)
+	key := attrconcurrency.InFlightLoadDataKey.WithNonEmptyProducerName(producer.typedName.Name).String()
+	val, ok := endpoints[0].Get(key)
 	require.True(t, ok)
 	load := val.(*attrconcurrency.InFlightLoad)
 	require.Equal(t, int64(5), load.Requests)

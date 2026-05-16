@@ -84,9 +84,9 @@ func (p *LatencyAdmission) TypedName() fwkplugin.TypedName {
 }
 
 // Consumes declares that this plugin reads latency prediction data from endpoints.
-func (p *LatencyAdmission) Consumes() map[string]any {
-	return map[string]any{
-		attrlatency.LatencyPredictionInfoKey: attrlatency.LatencyPredictionInfo{},
+func (p *LatencyAdmission) Consumes() map[fwkplugin.DataKey]any {
+	return map[fwkplugin.DataKey]any{
+		attrlatency.LatencyPredictionInfoDataKey: attrlatency.LatencyPredictionInfo{},
 	}
 }
 
@@ -134,7 +134,7 @@ func (p *LatencyAdmission) AdmitRequest(ctx context.Context, request *fwksched.I
 		}
 
 		// Valid prediction: both TTFT and TPOT within SLO.
-		if latencyInfoRaw, ok := endpoint.Get(attrlatency.LatencyPredictionInfoKey); ok {
+		if latencyInfoRaw, ok := endpoint.Get(attrlatency.LatencyPredictionInfoDataKey.String()); ok {
 			hasPredictions = true
 			latencyInfo := latencyInfoRaw.(*attrlatency.LatencyPredictionInfo)
 			if latencyInfo.IsValid() {

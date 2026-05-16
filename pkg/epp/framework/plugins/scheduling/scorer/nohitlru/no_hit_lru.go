@@ -141,7 +141,7 @@ func (s *NoHitLRU) isColdRequest(ctx context.Context, endpoints []scheduling.End
 	logger := log.FromContext(ctx).V(logging.DEBUG)
 
 	for _, ep := range endpoints {
-		attr, ok := ep.Get(attrprefix.PrefixCacheMatchInfoKey)
+		attr, ok := ep.Get(attrprefix.PrefixCacheMatchInfoDataKey.String())
 		if !ok {
 			continue
 		}

@@ -150,15 +150,15 @@ func (p *Plugin) Filter(ctx context.Context, _ *fwksched.CycleState, _ *fwksched
 	return sticky
 }
 
-func (p *Plugin) Consumes() map[string]any {
-	return map[string]any{
-		attrlatency.LatencyPredictionInfoKey: attrlatency.LatencyPredictionInfo{},
-		attrprefix.PrefixCacheMatchInfoKey:   attrprefix.PrefixCacheMatchInfo{},
+func (p *Plugin) Consumes() map[fwkplugin.DataKey]any {
+	return map[fwkplugin.DataKey]any{
+		attrlatency.LatencyPredictionInfoDataKey: attrlatency.LatencyPredictionInfo{},
+		attrprefix.PrefixCacheMatchInfoDataKey:   attrprefix.PrefixCacheMatchInfo{},
 	}
 }
 
 func prefixCacheScore(ep fwksched.Endpoint) float64 {
-	if raw, ok := ep.Get(attrprefix.PrefixCacheMatchInfoKey); ok {
+	if raw, ok := ep.Get(attrprefix.PrefixCacheMatchInfoDataKey.String()); ok {
 		info := raw.(*attrprefix.PrefixCacheMatchInfo)
 		if info.TotalBlocks() > 0 {
 			score := float64(info.MatchBlocks()) / float64(info.TotalBlocks())
@@ -173,7 +173,7 @@ func prefixCacheScore(ep fwksched.Endpoint) float64 {
 func bestTTFT(endpoints []fwksched.Endpoint) float64 {
 	best := math.MaxFloat64
 	for _, ep := range endpoints {
-		if raw, ok := ep.Get(attrlatency.LatencyPredictionInfoKey); ok {
+		if raw, ok := ep.Get(attrlatency.LatencyPredictionInfoDataKey.String()); ok {
 			info := raw.(*attrlatency.LatencyPredictionInfo)
 			if info.TTFT() < best {
 				best = info.TTFT()

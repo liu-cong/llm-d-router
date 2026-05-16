@@ -153,7 +153,7 @@ func (s *Plugin) Score(ctx context.Context, _ *fwksched.CycleState, _ *fwksched.
 	hasPredictions := false
 	for _, ep := range endpoints {
 		d := epData{endpoint: ep}
-		if raw, ok := ep.Get(attrlatency.LatencyPredictionInfoKey); ok {
+		if raw, ok := ep.Get(attrlatency.LatencyPredictionInfoDataKey.String()); ok {
 			info := raw.(*attrlatency.LatencyPredictionInfo)
 			d.info = info
 			d.ttftHeadroom = info.TTFTHeadroom()
@@ -366,10 +366,10 @@ func (s *Plugin) compositeScores(ctx context.Context, endpoints []fwksched.Endpo
 	return scores
 }
 
-func (s *Plugin) Consumes() map[string]any {
-	return map[string]any{
-		attrlatency.LatencyPredictionInfoKey: attrlatency.LatencyPredictionInfo{},
-		attrprefix.PrefixCacheMatchInfoKey:   attrprefix.PrefixCacheMatchInfo{},
+func (s *Plugin) Consumes() map[fwkplugin.DataKey]any {
+	return map[fwkplugin.DataKey]any{
+		attrlatency.LatencyPredictionInfoDataKey: attrlatency.LatencyPredictionInfo{},
+		attrprefix.PrefixCacheMatchInfoDataKey:   attrprefix.PrefixCacheMatchInfo{},
 	}
 }
 
@@ -382,7 +382,7 @@ func normalizedWeights(a, b float64) (float64, float64) {
 }
 
 func prefixCacheScore(ep fwksched.Endpoint) float64 {
-	if raw, ok := ep.Get(attrprefix.PrefixCacheMatchInfoKey); ok {
+	if raw, ok := ep.Get(attrprefix.PrefixCacheMatchInfoDataKey.String()); ok {
 		info := raw.(*attrprefix.PrefixCacheMatchInfo)
 		if info.TotalBlocks() > 0 {
 			score := float64(info.MatchBlocks()) / float64(info.TotalBlocks())

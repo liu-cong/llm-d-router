@@ -86,7 +86,7 @@ func newColdNS(name string) scheduling.Endpoint {
 // newWarm returns an endpoint with prefix-cache match info indicating a cache hit.
 func newWarm(name string) scheduling.Endpoint {
 	ep := newCold(name)
-	ep.Put(attrprefix.PrefixCacheMatchInfoKey, attrprefix.NewPrefixCacheMatchInfo(5, 10, 1))
+	ep.Put(attrprefix.PrefixCacheMatchInfoDataKey.String(), attrprefix.NewPrefixCacheMatchInfo(5, 10, 1))
 	return ep
 }
 
@@ -281,7 +281,8 @@ func TestNoHitLRUPreferLeastRecentlyUsedAfterColdRequests(t *testing.T) {
 			&fwkdl.Metrics{},
 			nil,
 		)
-		w.Put(attrprefix.PrefixCacheMatchInfoKey, attrprefix.NewPrefixCacheMatchInfo(5, 10, 1))
+		key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(prefix.PrefixCacheScorerPluginType).String()
+		w.Put(key, attrprefix.NewPrefixCacheMatchInfo(5, 10, 1))
 		return []scheduling.Endpoint{w, endpointB, endpointC}
 	}
 

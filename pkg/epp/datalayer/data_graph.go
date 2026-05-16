@@ -17,10 +17,13 @@ limitations under the License.
 package datalayer
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
 	"slices"
+
+	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	fwkfc "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/flowcontrol"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin"
@@ -65,11 +68,12 @@ func ValidateAndOrderDataDependencies(plugins []plugin.Plugin) ([]string, error)
 // defaultProducerRegistry maps a data key to the plugin type that is its default producer.
 // factoryRegistry maps a plugin type to its factory function.
 // Only entries whose type is not already present in plugins are considered.
-func CreateMissingDataProducers(plugins []plugin.Plugin, defaultProducerRegistry map[string]string, factoryRegistry map[string]plugin.FactoryFunc, handle plugin.Handle) ([]plugin.Plugin, error) {
-	// Collect plugin types already present so we don't create duplicates.
-	existingTypes := make(map[string]bool)
+func CreateMissingDataProducers(ctx context.Context, plugins []plugin.Plugin, defaultProducerRegistry map[string]string, factoryRegistry map[string]plugin.FactoryFunc, handle plugin.Handle) ([]plugin.Plugin, error) {
+	logger := log.FromContext(ctx)
+	// Collect plugin instances already present so we don't create duplicates.
+	existingPlugins := make(map[plugin.TypedName]bool)
 	for _, p := range plugins {
-		existingTypes[p.TypedName().Type] = true
+		existingPlugins[p.TypedName()] = true
 	}
 
 	// Collect all keys already produced by existing plugins.
@@ -77,7 +81,7 @@ func CreateMissingDataProducers(plugins []plugin.Plugin, defaultProducerRegistry
 	for _, p := range plugins {
 		if producer, ok := p.(plugin.ProducerPlugin); ok {
 			for key := range producer.Produces() {
-				producedKeys[key] = true
+				producedKeys[key.String()] = true
 			}
 		}
 	}
@@ -87,12 +91,14 @@ func CreateMissingDataProducers(plugins []plugin.Plugin, defaultProducerRegistry
 	for _, p := range plugins {
 		if consumer, ok := p.(plugin.ConsumerPlugin); ok {
 			for key := range consumer.Consumes() {
-				if !producedKeys[key] {
-					missingKeys[key] = true
+				if !producedKeys[key.String()] {
+					missingKeys[key.String()] = true
 				}
 			}
 		}
 	}
+
+	logger.Info("Missing data keys", "missingKeys", missingKeys)
 
 	if len(missingKeys) == 0 {
 		return nil, nil
@@ -103,14 +109,15 @@ func CreateMissingDataProducers(plugins []plugin.Plugin, defaultProducerRegistry
 	neededTypes := make(map[string]string)
 	for key := range missingKeys {
 		pluginType, ok := defaultProducerRegistry[key]
-		if !ok || existingTypes[pluginType] {
+		if !ok || existingPlugins[plugin.TypedName{Type: pluginType, Name: pluginType}] {
 			continue
 		}
 		neededTypes[pluginType] = key
 	}
 
 	var plgns []plugin.Plugin
-	for pluginType, registeredKey := range neededTypes {
+	for key := range missingKeys {
+		pluginType, ok := defaultProducerRegistry[key]
 		factory, ok := factoryRegistry[pluginType]
 		if !ok {
 			continue
@@ -120,18 +127,8 @@ func CreateMissingDataProducers(plugins []plugin.Plugin, defaultProducerRegistry
 		if err != nil {
 			return nil, fmt.Errorf("failed to instantiate data producer %q: %w", pluginType, err)
 		}
-		producer, ok := candidate.(plugin.ProducerPlugin)
-		if !ok || existingTypes[pluginType] {
-			continue
-		}
-
-		// Validate that the instantiated producer produces the registered key.
-		if _, ok := producer.Produces()[registeredKey]; !ok {
-			return nil, fmt.Errorf("instantiated default data producer %q does not produce registered key %q", pluginType, registeredKey)
-		}
-
 		plgns = append(plgns, candidate)
-		existingTypes[pluginType] = true
+		existingPlugins[candidate.TypedName()] = true
 	}
 
 	return plgns, nil
@@ -207,7 +204,7 @@ func buildDAG(producers map[string]plugin.ProducerPlugin, consumers map[string]p
 					if consumedData, ok := consumer.Consumes()[producedKey]; ok {
 						// Check types are same.
 						if reflect.TypeOf(producedData) != reflect.TypeOf(consumedData) {
-							return nil, errors.New("data type mismatch between produced and consumed data for key: " + producedKey)
+							return nil, errors.New("data type mismatch between produced and consumed data for key: " + producedKey.String())
 						}
 						if pluginToLayerExecutionOrder(producer) > pluginToLayerExecutionOrder(consumer) {
 							return nil, errors.New("invalid plugin layer execution order: producer " + pName + " needs to be executed before consumer " + cName)
