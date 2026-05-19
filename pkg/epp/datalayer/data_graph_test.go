@@ -369,8 +369,9 @@ func TestCreateMissingDataProducers(t *testing.T) {
 			existingPlugins: []fwkplugin.Plugin{
 				&MockSchedulingPlugin{consumes: map[fwkplugin.DataKey]any{keyANonProducer: nil}},
 			},
-			factoryRegistry: map[string]fwkplugin.FactoryFunc{nonProducerType: nonProducerFactory},
-			wantTypes:       nil,
+			defaultProducerRegistry: map[string]string{keyANonProducer.String(): nonProducerType},
+			factoryRegistry:         map[string]fwkplugin.FactoryFunc{nonProducerType: nonProducerFactory},
+			wantTypes:               nil,
 		},
 		{
 			name: "only relevant producer is created among multiple registry entries",

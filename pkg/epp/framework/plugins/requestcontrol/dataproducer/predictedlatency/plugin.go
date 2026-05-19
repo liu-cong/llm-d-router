@@ -39,6 +39,7 @@ import (
 	fwkdl "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/datalayer"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin"
 	fwksched "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/scheduling"
+	attrlatency "github.com/llm-d/llm-d-router/pkg/epp/framework/plugins/datalayer/attribute/latency"
 	attrprefix "github.com/llm-d/llm-d-router/pkg/epp/framework/plugins/datalayer/attribute/prefix"
 	latencyproducerconstants "github.com/llm-d/llm-d-router/pkg/epp/framework/plugins/requestcontrol/dataproducer/predictedlatency/constants"
 )
@@ -66,13 +67,14 @@ const (
 // Scoring, picking, and admission are handled by separate sub-plugins:
 // LatencyScorer, AffinityWeightedPicker, and LatencyAdmission.
 type PredictedLatency struct {
-	typedName             plugin.TypedName
-	latencypredictor      latencypredictor.PredictorInterface
-	runningRequestLists   sync.Map                                      // Key: types.NamespacedName, Value: *requestPriorityQueue
-	sloContextStore       *ttlcache.Cache[string, *predictedLatencyCtx] // TTL cache for request contexts
-	config                Config
-	prefillTokensInFlight sync.Map // Key: endpoint NamespacedName.String(), Value: *atomic.Int64
-	prefixMatchDataKey    plugin.DataKey
+	typedName                    plugin.TypedName
+	latencypredictor             latencypredictor.PredictorInterface
+	runningRequestLists          sync.Map                                      // Key: types.NamespacedName, Value: *requestPriorityQueue
+	sloContextStore              *ttlcache.Cache[string, *predictedLatencyCtx] // TTL cache for request contexts
+	config                       Config
+	prefillTokensInFlight        sync.Map // Key: endpoint NamespacedName.String(), Value: *atomic.Int64
+	prefixMatchDataKey           plugin.DataKey
+	latencyPredictionInfoDataKey plugin.DataKey
 }
 
 // endpointCounter returns the atomic counter for the given endpoint key, creating it if necessary.
@@ -155,7 +157,7 @@ func PredictedLatencyFactory(name string, rawParameters json.RawMessage, handle 
 		return nil, fmt.Errorf("failed to start latency predictor: %w", err)
 	}
 
-	return NewPredictedLatency(parameters, predictor).WithName(name), nil
+	return NewPredictedLatency(name, parameters, predictor), nil
 }
 
 func (c *Config) validate() error {
@@ -179,12 +181,13 @@ func (c *Config) validate() error {
 	return nil
 }
 
-func NewPredictedLatency(config Config, predictor latencypredictor.PredictorInterface) *PredictedLatency {
+func NewPredictedLatency(name string, config Config, predictor latencypredictor.PredictorInterface) *PredictedLatency {
 	predictedLatency := &PredictedLatency{
-		typedName:          plugin.TypedName{Type: LatencyDataProviderPluginType, Name: LatencyDataProviderPluginType},
-		latencypredictor:   predictor,
-		config:             config,
-		prefixMatchDataKey: attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(config.PrefixMatchInfoProducerName),
+		typedName:                    plugin.TypedName{Type: LatencyDataProviderPluginType, Name: name},
+		latencypredictor:             predictor,
+		config:                       config,
+		prefixMatchDataKey:           attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(config.PrefixMatchInfoProducerName),
+		latencyPredictionInfoDataKey: attrlatency.LatencyPredictionInfoDataKey.WithNonEmptyProducerName(name),
 	}
 
 	predictedLatency.sloContextStore = ttlcache.New(
@@ -228,11 +231,6 @@ func startPredictor(handle plugin.Handle) (latencypredictor.PredictorInterface, 
 
 func (pl *PredictedLatency) TypedName() plugin.TypedName {
 	return pl.typedName
-}
-
-func (pl *PredictedLatency) WithName(name string) *PredictedLatency {
-	pl.typedName.Name = name
-	return pl
 }
 
 func (pl *PredictedLatency) getOrMakePredictedLatencyContextForRequest(request *fwksched.InferenceRequest) *predictedLatencyCtx {

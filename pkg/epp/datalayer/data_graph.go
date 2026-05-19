@@ -109,11 +109,14 @@ func CreateMissingDataProducers(ctx context.Context, defaultProducerRegistry map
 			return fmt.Errorf("factory not found for default producer: %v", defaultProducerNameOrType)
 		}
 		// pass nil params as this is default instantiation.
-		plugin, err := factory(defaultProducerNameOrType, nil, handle)
+		plg, err := factory(defaultProducerNameOrType, nil, handle)
 		if err != nil {
 			return fmt.Errorf("failed to instantiate data producer %q: %w", defaultProducerNameOrType, err)
 		}
-		handle.AddPlugin(plugin.TypedName().Name, plugin)
+		if _, ok := plg.(plugin.ProducerPlugin); !ok {
+			return fmt.Errorf("auto-created default entry %q is not a ProducerPlugin", defaultProducerNameOrType)
+		}
+		handle.AddPlugin(plg.TypedName().Name, plg)
 	}
 
 	return nil

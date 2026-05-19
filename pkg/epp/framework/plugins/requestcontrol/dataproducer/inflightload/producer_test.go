@@ -26,18 +26,26 @@ import (
 
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/datalayer"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/requestcontrol"
+	fwkplugin "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin"
 	fwkrh "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/requesthandling"
 	fwksched "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/scheduling"
 	attrconcurrency "github.com/llm-d/llm-d-router/pkg/epp/framework/plugins/datalayer/attribute/concurrency"
 )
 
+func newTestProducer() *InFlightLoadProducer {
+	return &InFlightLoadProducer{
+		typedName:      fwkplugin.TypedName{Type: InFlightLoadProducerType, Name: "inflight-load-producer"},
+		requestTracker: newConcurrencyTracker(),
+		tokenTracker:   newConcurrencyTracker(),
+		tokenEstimator: NewSimpleTokenEstimator(),
+		dk:             attrconcurrency.InFlightLoadDataKey.WithNonEmptyProducerName(""),
+	}
+}
+
 func TestInFlightLoadProducer_Produce(t *testing.T) {
 	t.Parallel()
 
-	producer := &InFlightLoadProducer{
-		requestTracker: newConcurrencyTracker(),
-		tokenTracker:   newConcurrencyTracker(),
-	}
+	producer := newTestProducer()
 
 	endpointName := "test-endpoint"
 	endpointID := fullEndpointName(endpointName)
@@ -64,11 +72,7 @@ func TestInFlightLoadProducer_Produce(t *testing.T) {
 func TestInFlightLoadProducer_Lifecycle(t *testing.T) {
 	t.Parallel()
 
-	producer := &InFlightLoadProducer{
-		requestTracker: newConcurrencyTracker(),
-		tokenTracker:   newConcurrencyTracker(),
-		tokenEstimator: NewSimpleTokenEstimator(),
-	}
+	producer := newTestProducer()
 	ctx := context.Background()
 	endpointName := "lifecycle-endpoint"
 	endpointID := fullEndpointName(endpointName)
@@ -92,11 +96,7 @@ func TestInFlightLoadProducer_Lifecycle(t *testing.T) {
 func TestInFlightLoadProducer_MultiPodLifecycle(t *testing.T) {
 	t.Parallel()
 
-	producer := &InFlightLoadProducer{
-		requestTracker: newConcurrencyTracker(),
-		tokenTracker:   newConcurrencyTracker(),
-		tokenEstimator: NewSimpleTokenEstimator(),
-	}
+	producer := newTestProducer()
 	ctx := context.Background()
 	podA := "pod-a"
 	podB := "pod-b"
@@ -132,10 +132,7 @@ func TestInFlightLoadProducer_MultiPodLifecycle(t *testing.T) {
 func TestInFlightLoadProducer_NotificationCleanup(t *testing.T) {
 	t.Parallel()
 
-	producer := &InFlightLoadProducer{
-		requestTracker: newConcurrencyTracker(),
-		tokenTracker:   newConcurrencyTracker(),
-	}
+	producer := newTestProducer()
 	ctx := context.Background()
 	endpointName := "deleted-endpoint"
 	endpointID := fullEndpointName(endpointName)
@@ -161,11 +158,7 @@ func TestInFlightLoadProducer_NotificationCleanup(t *testing.T) {
 func TestInFlightLoadProducer_ConcurrencyStress(t *testing.T) {
 	t.Parallel()
 
-	producer := &InFlightLoadProducer{
-		requestTracker: newConcurrencyTracker(),
-		tokenTracker:   newConcurrencyTracker(),
-		tokenEstimator: NewSimpleTokenEstimator(),
-	}
+	producer := newTestProducer()
 	ctx := context.Background()
 	endpointName := "stress-endpoint"
 	endpointID := fullEndpointName(endpointName)

@@ -71,7 +71,6 @@ func (pl *PredictedLatency) Produce(ctx context.Context, request *fwksched.Infer
 		pl.updateRequestContextWithPredictions(predictedLatencyCtx, predictions)
 
 		// Store predictions in endpoint attributes
-		key := attrlatency.LatencyPredictionInfoDataKey.WithNonEmptyProducerName(pl.typedName.Name)
 		for _, pred := range predictions {
 			if pred.Endpoint != nil {
 				latencyInfo := attrlatency.NewLatencyPredictionInfo(
@@ -83,7 +82,7 @@ func (pl *PredictedLatency) Produce(ctx context.Context, request *fwksched.Infer
 					pred.TPOT,
 					pl.getEndpointRunningRequestCount(pred.Endpoint),
 				)
-				pred.Endpoint.Put(key.String(), latencyInfo)
+				pred.Endpoint.Put(pl.latencyPredictionInfoDataKey.String(), latencyInfo)
 				logger.V(logutil.DEBUG).Info("Stored latency prediction in endpoint",
 					"pod", pred.Endpoint.GetMetadata().NamespacedName.Name,
 					"ttft", pred.TTFT,
@@ -108,9 +107,8 @@ func (pl *PredictedLatency) Produce(ctx context.Context, request *fwksched.Infer
 }
 
 func (pl *PredictedLatency) Produces() map[plugin.DataKey]any {
-	key := attrlatency.LatencyPredictionInfoDataKey.WithNonEmptyProducerName(pl.typedName.Name)
 	return map[plugin.DataKey]any{
-		key: attrlatency.LatencyPredictionInfo{},
+		pl.latencyPredictionInfoDataKey: attrlatency.LatencyPredictionInfo{},
 	}
 }
 

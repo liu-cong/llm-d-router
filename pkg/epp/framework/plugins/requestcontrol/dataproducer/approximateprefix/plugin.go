@@ -50,6 +50,7 @@ type dataProducer struct {
 	indexerInst indexerInterface
 	pluginState *plugin.PluginState
 	wg          sync.WaitGroup // Used for waiting on async cache updates in tests.
+	dk          plugin.DataKey
 }
 
 // TypedName returns the type and name of the plugin.
@@ -59,12 +60,11 @@ func (p *dataProducer) TypedName() plugin.TypedName {
 
 // Produces returns the data produced by the plugin.
 func (p *dataProducer) Produces() map[plugin.DataKey]any {
-	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(p.typedName.Name)
-	return map[plugin.DataKey]any{key: attrprefix.PrefixCacheMatchInfo{}}
+	return map[plugin.DataKey]any{p.dk: attrprefix.PrefixCacheMatchInfo{}}
 }
 
 // newDataProducer returns a new DataProducer plugin.
-func newDataProducer(ctx context.Context, name, config config, handle plugin.Handle) (*dataProducer, error) {
+func newDataProducer(ctx context.Context, name string, config config, handle plugin.Handle) (*dataProducer, error) {
 	log.FromContext(ctx).V(logutil.DEFAULT).Info("Prefix DataProducer initialized", "config", config)
 
 	//nolint:staticcheck // BlockSize is deprecated, but we check it here to provide a migration path for users.
@@ -88,6 +88,7 @@ func newDataProducer(ctx context.Context, name, config config, handle plugin.Han
 		config:      config,
 		indexerInst: indexer,
 		pluginState: plugin.NewPluginState(ctx),
+		dk:          attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(name),
 	}
 
 	if handle != nil {
@@ -144,10 +145,9 @@ func (p *dataProducer) Produce(ctx context.Context, request *fwksched.InferenceR
 	total := len(hashes)
 	prefixCacheServers := p.matchLongestPrefix(ctx, hashes)
 
-	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(p.typedName.Name)
 	for _, pod := range pods {
 		matchLen := prefixCacheServers[ServerID(pod.GetMetadata().NamespacedName)]
-		pod.Put(key.String(), attrprefix.NewPrefixCacheMatchInfo(matchLen, total, blockSize))
+		pod.Put(p.dk.String(), attrprefix.NewPrefixCacheMatchInfo(matchLen, total, blockSize))
 	}
 
 	state := &SchedulingContextState{

@@ -35,6 +35,7 @@ func TestTokenLoadScorer(t *testing.T) {
 	scorer := &TokenLoadScorer{
 		typedName:            fwkplugin.TypedName{Type: TokenLoadScorerType, Name: TokenLoadScorerType},
 		queueThresholdTokens: threshold,
+		inFlightLoadDataKey:  attrconcurrency.InFlightLoadDataKey.WithNonEmptyProducerName(""),
 	}
 
 	pod1NN := types.NamespacedName{Namespace: "default", Name: "pod1"}

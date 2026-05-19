@@ -46,6 +46,7 @@ func InFlightLoadProducerFactory(name string, _ json.RawMessage, _ fwkplugin.Han
 		requestTracker: newConcurrencyTracker(),
 		tokenTracker:   newConcurrencyTracker(),
 		tokenEstimator: NewSimpleTokenEstimator(),
+		dk:             attrconcurrency.InFlightLoadDataKey.WithNonEmptyProducerName(name),
 	}, nil
 }
 
@@ -62,6 +63,7 @@ type InFlightLoadProducer struct {
 	requestTracker *concurrencyTracker
 	tokenTracker   *concurrencyTracker
 	tokenEstimator TokenEstimator
+	dk             fwkplugin.DataKey
 }
 
 func (p *InFlightLoadProducer) TypedName() fwkplugin.TypedName {
@@ -98,10 +100,9 @@ func (p *InFlightLoadProducer) ExtractEndpoint(ctx context.Context, event datala
 }
 
 func (p *InFlightLoadProducer) Produce(_ context.Context, _ *fwksched.InferenceRequest, endpoints []fwksched.Endpoint) error {
-	key := attrconcurrency.InFlightLoadDataKey.WithNonEmptyProducerName(p.typedName.Name)
 	for _, e := range endpoints {
 		endpointID := e.GetMetadata().NamespacedName.String()
-		e.Put(key.String(), &attrconcurrency.InFlightLoad{
+		e.Put(p.dk.String(), &attrconcurrency.InFlightLoad{
 			Tokens:   p.tokenTracker.get(endpointID),
 			Requests: p.requestTracker.get(endpointID),
 		})
@@ -180,9 +181,8 @@ func (p *InFlightLoadProducer) release(endpoint fwksched.Endpoint, request *fwks
 }
 
 func (p *InFlightLoadProducer) Produces() map[fwkplugin.DataKey]any {
-	key := attrconcurrency.InFlightLoadDataKey.WithNonEmptyProducerName(p.typedName.Name)
 	return map[fwkplugin.DataKey]any{
-		key: attrconcurrency.InFlightLoad{},
+		p.dk: attrconcurrency.InFlightLoad{},
 	}
 }
 

@@ -28,7 +28,7 @@ import (
 )
 
 func TestProducesConsumes(t *testing.T) {
-	pl := NewPredictedLatency(DefaultConfig, nil)
+	pl := NewPredictedLatency(LatencyDataProviderPluginType, DefaultConfig, nil)
 
 	produces := pl.Produces()
 	expectedProduceKey := attrlatency.LatencyPredictionInfoDataKey.WithNonEmptyProducerName(pl.TypedName().Name)
@@ -46,7 +46,7 @@ func TestProducesConsumes(t *testing.T) {
 func TestProduce_CancelledContextDoesNotPublish(t *testing.T) {
 	cfg := DefaultConfig
 	cfg.PredictInProduce = false // skip the prediction sidecar path
-	pl := NewPredictedLatency(cfg, nil)
+	pl := NewPredictedLatency(LatencyDataProviderPluginType, cfg, nil)
 
 	request := createTestInferenceRequest("cancel-test", 0, 0)
 	endpoint := createTestEndpoint("pod-a", 0.1, 0, 0)
@@ -66,7 +66,7 @@ func TestProduce_CancelledContextDoesNotPublish(t *testing.T) {
 func TestProduce_LiveContextPublishes(t *testing.T) {
 	cfg := DefaultConfig
 	cfg.PredictInProduce = false
-	pl := NewPredictedLatency(cfg, nil)
+	pl := NewPredictedLatency(LatencyDataProviderPluginType, cfg, nil)
 
 	request := createTestInferenceRequest("live-test", 0, 0)
 	endpoint := createTestEndpoint("pod-a", 0.1, 0, 0)
