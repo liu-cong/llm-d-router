@@ -18,6 +18,7 @@ package runner
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -284,7 +285,7 @@ func (r *Runner) setup(ctx context.Context, cfg *rest.Config, opts *runserver.Op
 		setupLog.Error(err, "Failed to parse configuration")
 		return nil, nil, err
 	}
-	setupLog.Info("Raw config after phase one", "config", rawConfig)
+	setupLog.Info("Raw config after phase one", "config", toRawMap(rawConfig))
 
 	useNewMetrics := !r.featureGates[datalayer.EnableLegacyMetricsFeatureGate]
 	epf := r.setupMetricsCollection(useNewMetrics, opts, pmc)
@@ -1036,4 +1037,15 @@ func serveMetrics(ctx context.Context, port int, enablePprof bool) error {
 		return fmt.Errorf("metrics server: %w", err)
 	}
 	return nil
+}
+
+func toRawMap(cfg *configapi.EndpointPickerConfig) map[string]any {
+	if cfg == nil {
+		return nil
+	}
+	var rawMap map[string]any
+	if bytes, err := json.Marshal(cfg); err == nil {
+		_ = json.Unmarshal(bytes, &rawMap)
+	}
+	return rawMap
 }
