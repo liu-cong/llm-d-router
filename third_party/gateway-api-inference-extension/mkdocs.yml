@@ -1,0 +1,111 @@
+site_name: Kubernetes Gateway API Inference Extension
+repo_url: https://github.com/kubernetes-sigs/gateway-api-inference-extension
+repo_name: kubernetes-sigs/gateway-api-inference-extension
+site_dir: site
+docs_dir: site-src
+extra_css:
+  - stylesheets/extra.css
+theme:
+  name: material
+  icon:
+    repo: fontawesome/brands/git-alt
+  logo: images/logo/logo-text-large-horizontal-white.png
+  favicon: images/favicon-64.png
+  features:
+    - content.code.annotate
+    - content.code.copy
+    - search.highlight
+    - navigation.tabs
+    - navigation.top
+    - navigation.expand
+    - content.tabs.link
+  palette:
+    primary: custom
+  custom_dir: site-src/overrides
+edit_uri: edit/main/site-src/
+plugins:
+  - search
+  - awesome-pages
+  - macros:
+      j2_line_comment_prefix: "#$"
+  - mermaid2
+markdown_extensions:
+  - admonition
+  - meta
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - pymdownx.details
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.snippets
+  - toc:
+      permalink: true
+  - tables
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+nav:
+  - Overview:
+    - Introduction: index.md
+    - Concepts:
+        API Overview: concepts/api-overview.md
+        Design Principles: concepts/design-principles.md
+        Conformance: concepts/conformance.md
+        Roles and Personas: concepts/roles-and-personas.md
+        Priority and Capacity: concepts/priority-and-capacity.md
+    - Implementations:
+      - Gateways: implementations/gateways.md
+      - Model Servers: implementations/model-servers.md
+    - FAQ: faq.md
+  - Guides:
+    - User Guides:
+      - Getting started (Released): guides/index.md
+      - Getting started (Latest/Main): guides/getting-started-latest.md
+      - Use Cases:
+        - Serving Multiple Inference Pools (Latest/Main): guides/serving-multiple-inference-pools-latest.md
+        - Deploy As a Standalone Request Scheduler: guides/standalone.md
+      - Flow Control: guides/flow-control.md
+      - Rollout:
+        - Adapter Rollout: guides/adapter-rollout.md
+        - InferencePool Rollout: guides/inferencepool-rollout.md
+      - Observability:
+        - Metrics: guides/metrics-and-observability.md
+        - Traces: guides/trace.md
+      - Configuration Guide:
+          - Configuring the EndPoint Picker via configuration YAML file: guides/epp-configuration/config-text.md
+          - Prefix Cache Aware Plugin: guides/epp-configuration/prefix-aware.md
+          - Resource Tuning: guides/epp-configuration/resource-tuning.md
+          - Latency-Based Routing: guides/latency-based-predictor.md
+      - Migration Guide: guides/ga-migration.md
+      - Troubleshooting Guide: guides/troubleshooting.md
+    - Implementer Guides:
+      - Getting started: guides/implementers.md
+      - Conformance Tests: guides/conformance-tests.md
+  - Performance:
+    - Benchmark: performance/benchmark/index.md
+    - Advanced Benchmarking Configs:
+      - Prefix Cache Aware: performance/benchmark/advanced-configs/prefix-cache-aware.md
+      - Decode Heavy Workload: performance/benchmark/advanced-configs/decode-heavy-workload.md
+      - Prefill Heavy Workload: performance/benchmark/advanced-configs/prefill-heavy-workload.md
+    - Regression Testing: performance/regression-testing/index.md
+  - Reference:
+    - v1 API Reference: reference/spec.md
+    - v1alpha1 API Reference:
+      - reference/x-v1a1-spec.md
+    - v1alpha2 API Reference:
+      - reference/x-v1a2-spec.md
+    - API Types:
+      - InferencePool: api-types/inferencepool.md
+      - InferenceObjective: api-types/inferenceobjective.md
+      - InferencePoolImport: api-types/inferencepoolimport.md
+      - InferenceModelRewrite: api-types/inferencemodelrewrite.md
+  - Enhancements:
+    - Overview: enhancements/overview.md
+  - Contributing:
+    - How to Get Involved: contributing/index.md
