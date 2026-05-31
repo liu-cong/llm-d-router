@@ -153,7 +153,6 @@ func TestPreRequest(t *testing.T) {
 		prompts := []string{"aaaa", "bbbb", "cccc"}
 		allHashes := make([][]blockHash, 0, len(prompts))
 
-
 		for _, prompt := range prompts {
 			req := &fwksched.InferenceRequest{
 				RequestID:   uuid.NewString(),
