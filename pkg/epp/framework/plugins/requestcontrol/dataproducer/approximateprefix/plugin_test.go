@@ -151,7 +151,8 @@ func TestPreRequest(t *testing.T) {
 		// We want each request to have exactly 1 block of characters to easily control capacity.
 		// averageCharactersPerToken is 4. So 4 characters = 1 block.
 		prompts := []string{"aaaa", "bbbb", "cccc"}
-		var allHashes [][]blockHash
+		allHashes := make([][]blockHash, 0, len(prompts))
+
 
 		for _, prompt := range prompts {
 			req := &fwksched.InferenceRequest{
