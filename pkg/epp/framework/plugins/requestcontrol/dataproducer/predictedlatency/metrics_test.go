@@ -68,6 +68,26 @@ func TestRecordRequestLatencyMetrics(t *testing.T) {
 	require.Equal(t, uint64(1), llmdTpot.GetSampleCount())
 	require.Equal(t, 0.05, llmdTpot.GetSampleSum())
 
+	llmdPredictedTtft, err := getHistogram(llmdRequestPredictedTTFT, "test-plugin", "test-type", "model", "target")
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), llmdPredictedTtft.GetSampleCount())
+	require.Equal(t, 0.4, llmdPredictedTtft.GetSampleSum())
+
+	llmdTtftDuration, err := getHistogram(llmdRequestTTFTPredictionDuration, "test-plugin", "test-type", "model", "target")
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), llmdTtftDuration.GetSampleCount())
+	require.Equal(t, 0.1, llmdTtftDuration.GetSampleSum())
+
+	llmdPredictedTpot, err := getHistogram(llmdRequestPredictedTPOT, "test-plugin", "test-type", "model", "target")
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), llmdPredictedTpot.GetSampleCount())
+	require.Equal(t, 0.04, llmdPredictedTpot.GetSampleSum())
+
+	llmdTpotDuration, err := getHistogram(llmdRequestTPOTPredictionDuration, "test-plugin", "test-type", "model", "target")
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), llmdTpotDuration.GetSampleCount())
+	require.Equal(t, 0.2, llmdTpotDuration.GetSampleSum())
+
 	require.Equal(t, 0.5, testutil.ToFloat64(inferenceGauges.WithLabelValues("model", "target", typeTTFT)))
 	require.Equal(t, 0.05, testutil.ToFloat64(inferenceGauges.WithLabelValues("model", "target", typeTPOT)))
 	require.Equal(t, float64(1), testutil.ToFloat64(sloViolationCounter.WithLabelValues("model", "target", typeTTFT)))
@@ -75,6 +95,10 @@ func TestRecordRequestLatencyMetrics(t *testing.T) {
 
 	require.Equal(t, 0.5, testutil.ToFloat64(llmdInferenceGauges.WithLabelValues("test-plugin", "test-type", "model", "target", typeTTFT)))
 	require.Equal(t, 0.05, testutil.ToFloat64(llmdInferenceGauges.WithLabelValues("test-plugin", "test-type", "model", "target", typeTPOT)))
+	require.Equal(t, 0.4, testutil.ToFloat64(llmdInferenceGauges.WithLabelValues("test-plugin", "test-type", "model", "target", typePredictedTTFT)))
+	require.Equal(t, 0.1, testutil.ToFloat64(llmdInferenceGauges.WithLabelValues("test-plugin", "test-type", "model", "target", typeTTFTPredictionDuration)))
+	require.Equal(t, 0.04, testutil.ToFloat64(llmdInferenceGauges.WithLabelValues("test-plugin", "test-type", "model", "target", typePredictedTPOT)))
+	require.Equal(t, 0.2, testutil.ToFloat64(llmdInferenceGauges.WithLabelValues("test-plugin", "test-type", "model", "target", typeTPOTPredictionDuration)))
 	require.Equal(t, float64(1), testutil.ToFloat64(llmdSloViolationCounter.WithLabelValues("test-plugin", "test-type", "model", "target", typeTTFT)))
 	require.Equal(t, float64(1), testutil.ToFloat64(llmdSloViolationCounter.WithLabelValues("test-plugin", "test-type", "model", "target", typeTPOT)))
 }
