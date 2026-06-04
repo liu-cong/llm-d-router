@@ -27,6 +27,7 @@ import (
 	"fmt"
 	"strings"
 
+	fwkdl "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/datalayer"
 	fwkplugin "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/requestcontrol"
 	fwksched "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/scheduling"
@@ -104,7 +105,7 @@ func (p *Producer) Produces() map[fwkplugin.DataKey]any {
 // the request's attribute store. When no identifier can be found the
 // producer is a no-op; consumers must handle absence as "no session
 // preference".
-func (p *Producer) Produce(_ context.Context, request *fwksched.InferenceRequest, _ []fwksched.Endpoint) error {
+func (p *Producer) Produce(_ context.Context, request *fwksched.InferenceRequest, _ []fwkdl.Endpoint, _ []fwksched.Endpoint) error {
 	if request == nil {
 		return nil
 	}

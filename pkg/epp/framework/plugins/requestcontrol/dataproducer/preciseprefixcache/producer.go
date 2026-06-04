@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/llm-d/llm-d-router/pkg/common/observability/logging"
+	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/datalayer"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/requestcontrol"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/scheduling"
@@ -221,14 +222,14 @@ func (p *Producer) Consumes() plugin.DataDependencies {
 // With speculativeIndexing enabled, the computed block keys are stashed
 // for PreRequest to seed the index after a routing decision is made.
 func (p *Producer) Produce(ctx context.Context,
-	request *scheduling.InferenceRequest, endpoints []scheduling.Endpoint,
+	request *scheduling.InferenceRequest, _ []datalayer.Endpoint, snapshottedEndpoints []scheduling.Endpoint,
 ) error {
 	ctx, span := telemetry.Tracer().Start(ctx, "llm_d.epp.producer.precise_prefix_cache",
 		trace.WithSpanKind(trace.SpanKindInternal),
 	)
 	defer span.End()
 
-	span.SetAttributes(attribute.Int("llm_d.producer.candidate_endpoints", len(endpoints)))
+	span.SetAttributes(attribute.Int("llm_d.producer.candidate_endpoints", len(snapshottedEndpoints)))
 	if request != nil {
 		if request.TargetModel != "" {
 			span.SetAttributes(attribute.String("gen_ai.request.model", request.TargetModel))
@@ -250,7 +251,7 @@ func (p *Producer) Produce(ctx context.Context,
 		return nil
 	}
 
-	endpointSet := extractEndpointSet(endpoints)
+	endpointSet := extractEndpointSet(snapshottedEndpoints)
 
 	keyToPods, err := p.kvCacheIndexer.KVBlockIndex().Lookup(ctx, blockKeys, endpointSet)
 	if err != nil {
@@ -266,7 +267,7 @@ func (p *Producer) Produce(ctx context.Context,
 
 	totalBlocks := len(blockKeys)
 	maxMatch := 0
-	for _, ep := range endpoints {
+	for _, ep := range snapshottedEndpoints {
 		md := ep.GetMetadata()
 		if md == nil {
 			continue

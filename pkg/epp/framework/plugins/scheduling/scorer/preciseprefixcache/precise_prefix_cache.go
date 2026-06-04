@@ -222,9 +222,9 @@ func (p *Plugin) Consumes() plugin.DataDependencies {
 }
 
 func (p *Plugin) Produce(ctx context.Context,
-	req *scheduling.InferenceRequest, endpoints []scheduling.Endpoint,
+	req *scheduling.InferenceRequest, originalEndpoints []fwkdl.Endpoint, snapshottedEndpoints []scheduling.Endpoint,
 ) error {
-	return p.producer.Produce(ctx, req, endpoints)
+	return p.producer.Produce(ctx, req, originalEndpoints, snapshottedEndpoints)
 }
 
 func (p *Plugin) PreRequest(ctx context.Context,

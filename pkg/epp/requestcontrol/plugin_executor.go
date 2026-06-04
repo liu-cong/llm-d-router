@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	fwkdl "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/datalayer"
 	fwkrc "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/requestcontrol"
 	fwksched "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/scheduling"
 )
@@ -29,9 +30,10 @@ import (
 // executePluginsAsDAG executes DataProducer plugins as a DAG based on their dependencies asynchronously.
 // So, a plugin is executed only after all its dependencies have been executed.
 // If there is a cycle or any plugin fails with error, it returns an error.
-func executePluginsAsDAG(ctx context.Context, plugins []fwkrc.DataProducer, request *fwksched.InferenceRequest, endpoints []fwksched.Endpoint) error {
+func executePluginsAsDAG(ctx context.Context, plugins []fwkrc.DataProducer, request *fwksched.InferenceRequest,
+	originalEndpoints []fwkdl.Endpoint, snapshottedEndpoints []fwksched.Endpoint) error {
 	for _, plugin := range plugins {
-		if err := plugin.Produce(ctx, request, endpoints); err != nil {
+		if err := plugin.Produce(ctx, request, originalEndpoints, snapshottedEndpoints); err != nil {
 			return fmt.Errorf("DataProducer %q failed: %w", plugin.TypedName().String(), err)
 		}
 	}
@@ -42,13 +44,13 @@ func executePluginsAsDAG(ctx context.Context, plugins []fwkrc.DataProducer, requ
 // The child context is cancelled when the timeout fires so plugins can observe cancellation
 // (e.g. abort outbound HTTP calls) and avoid committing state after the director has moved on.
 func dataProducerPluginsWithTimeout(ctx context.Context, timeout time.Duration, plugins []fwkrc.DataProducer,
-	request *fwksched.InferenceRequest, endpoints []fwksched.Endpoint) error {
+	request *fwksched.InferenceRequest, originalEndpoints []fwkdl.Endpoint, snapshottedEndpoints []fwksched.Endpoint) error {
 	ctx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()
 
 	errCh := make(chan error, 1)
 	go func() {
-		errCh <- executePluginsAsDAG(ctx, plugins, request, endpoints)
+		errCh <- executePluginsAsDAG(ctx, plugins, request, originalEndpoints, snapshottedEndpoints)
 	}()
 
 	select {

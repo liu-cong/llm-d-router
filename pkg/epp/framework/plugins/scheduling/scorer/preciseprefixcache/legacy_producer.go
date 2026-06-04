@@ -24,6 +24,7 @@ import (
 	"github.com/llm-d/llm-d-kv-cache/pkg/tokenization"
 	tokenizerTypes "github.com/llm-d/llm-d-kv-cache/pkg/tokenization/types"
 
+	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/datalayer"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin"
 	fwkrh "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/requesthandling"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/scheduling"
@@ -95,12 +96,12 @@ func (lp *legacyProducer) Consumes() plugin.DataDependencies {
 // Produce tokenizes the request prompt via the wrapper-owned pool when
 // no TokenizedPrompt is set, then delegates to the embedded Producer.
 func (lp *legacyProducer) Produce(ctx context.Context,
-	request *scheduling.InferenceRequest, endpoints []scheduling.Endpoint,
+	request *scheduling.InferenceRequest, originalEndpoints []datalayer.Endpoint, snapshottedEndpoints []scheduling.Endpoint,
 ) error {
 	if lp.tokenizerPool != nil && needsLegacyTokenization(request) {
 		lp.tokenizeRequest(request)
 	}
-	return lp.Producer.Produce(ctx, request, endpoints)
+	return lp.Producer.Produce(ctx, request, originalEndpoints, snapshottedEndpoints)
 }
 
 func needsLegacyTokenization(request *scheduling.InferenceRequest) bool {

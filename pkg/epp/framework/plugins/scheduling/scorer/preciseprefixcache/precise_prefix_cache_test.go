@@ -175,7 +175,7 @@ func TestLegacyProducer_TokenizesCompletionPromptViaPool(t *testing.T) {
 			Completions: &fwkrh.CompletionsRequest{Prompt: fwkrh.Prompt{Raw: "hello world"}},
 		},
 	}
-	require.NoError(t, lp.Produce(ctx, req, nil))
+	require.NoError(t, lp.Produce(ctx, req, nil, nil))
 
 	assert.Equal(t, 1, stub.calls)
 	assert.Equal(t, "hello world", stub.lastRaw)
@@ -218,7 +218,7 @@ func TestLegacyProducer_TokensFlowToEndpointAttribute(t *testing.T) {
 		Port:           "8000",
 	}, nil, nil)
 
-	require.NoError(t, lp.Produce(ctx, req, []scheduling.Endpoint{endpoint}))
+	require.NoError(t, lp.Produce(ctx, req, nil, []scheduling.Endpoint{endpoint}))
 
 	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName("inner").String()
 	raw, ok := endpoint.Get(key)
@@ -253,7 +253,7 @@ func TestLegacyProducer_KeepsExistingTokenizedPrompt(t *testing.T) {
 			Completions:     &fwkrh.CompletionsRequest{Prompt: fwkrh.Prompt{Raw: "should not tokenize"}},
 		},
 	}
-	require.NoError(t, lp.Produce(ctx, req, nil))
+	require.NoError(t, lp.Produce(ctx, req, nil, nil))
 
 	assert.Equal(t, 0, stub.calls, "pool must not be called when tokens already present")
 	assert.Equal(t, []uint32{5, 5, 5}, req.Body.TokenizedPrompt.TokenIDs)

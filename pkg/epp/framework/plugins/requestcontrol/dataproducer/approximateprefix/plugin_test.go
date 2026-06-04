@@ -80,7 +80,7 @@ func TestProduce(t *testing.T) {
 
 	// We need to simulate the PreRequest logic since Produce only reads from the indexer.
 	// But first let's see if Produce correctly handles an empty indexer.
-	err = p.Produce(context.Background(), req1, endpoints)
+	err = p.Produce(context.Background(), req1, nil, endpoints)
 	assert.NoError(t, err)
 
 	// Verify state was written to PluginState
@@ -122,7 +122,7 @@ func TestPreRequest(t *testing.T) {
 		}
 
 		// 1. Produce data (this saves state)
-		_ = p.Produce(context.Background(), req1, []fwksched.Endpoint{endpoint1})
+		_ = p.Produce(context.Background(), req1, nil, []fwksched.Endpoint{endpoint1})
 
 		// 2. Simulate scheduling result
 		res := &fwksched.SchedulingResult{
@@ -176,7 +176,7 @@ func TestPreRequest(t *testing.T) {
 					},
 				},
 			}
-			_ = p.Produce(context.Background(), req, []fwksched.Endpoint{endpoint1})
+			_ = p.Produce(context.Background(), req, nil, []fwksched.Endpoint{endpoint1})
 
 			res := &fwksched.SchedulingResult{
 				PrimaryProfileName: "default",
@@ -256,7 +256,7 @@ func TestPrefixPluginCompletion(t *testing.T) {
 			},
 		},
 	}
-	_ = p.Produce(context.Background(), req1, endpoints)
+	_ = p.Produce(context.Background(), req1, nil, endpoints)
 	state, _ := plugin.ReadPluginStateKey[*SchedulingContextState](p.PluginState(), req1.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
 	// Input size is 6, block size is 4, so 1 body block. Total hashes = 1 (model only is not a block)
 	assert.Equal(t, 2, len(state.PrefixHashes))
@@ -282,7 +282,7 @@ func TestPrefixPluginCompletion(t *testing.T) {
 			},
 		},
 	}
-	_ = p.Produce(context.Background(), req3, endpoints)
+	_ = p.Produce(context.Background(), req3, nil, endpoints)
 
 	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(ApproxPrefixCachePluginType).String()
 	// Verify pod1 has the correct prefix match info
@@ -328,7 +328,7 @@ func TestPrefixPluginChatCompletionsGrowth(t *testing.T) {
 			},
 		},
 	}
-	_ = p.Produce(context.Background(), req1, endpoints)
+	_ = p.Produce(context.Background(), req1, nil, endpoints)
 	state1, _ := plugin.ReadPluginStateKey[*SchedulingContextState](p.PluginState(), req1.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
 	initialHashCount := len(state1.PrefixHashes)
 	assert.Greater(t, initialHashCount, 0)
@@ -358,7 +358,7 @@ func TestPrefixPluginChatCompletionsGrowth(t *testing.T) {
 			},
 		},
 	}
-	_ = p.Produce(context.Background(), req2, endpoints)
+	_ = p.Produce(context.Background(), req2, nil, endpoints)
 	state2, _ := plugin.ReadPluginStateKey[*SchedulingContextState](p.PluginState(), req2.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
 	extendedHashCount := len(state2.PrefixHashes)
 	assert.Greater(t, extendedHashCount, initialHashCount)
@@ -402,7 +402,7 @@ func TestPrefixPluginChatCompletionsMultimodalSameUrlMatches(t *testing.T) {
 			},
 		},
 	}
-	_ = p.Produce(context.Background(), req1, endpoints)
+	_ = p.Produce(context.Background(), req1, nil, endpoints)
 	state1, _ := plugin.ReadPluginStateKey[*SchedulingContextState](p.PluginState(), req1.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
 	initialHashCount := len(state1.PrefixHashes)
 	assert.Greater(t, initialHashCount, 0)
@@ -435,7 +435,7 @@ func TestPrefixPluginChatCompletionsMultimodalSameUrlMatches(t *testing.T) {
 			},
 		},
 	}
-	_ = p.Produce(context.Background(), req2, endpoints)
+	_ = p.Produce(context.Background(), req2, nil, endpoints)
 	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(ApproxPrefixCachePluginType).String()
 	info, _ := endpoint1.Get(key)
 	prefixInfo := info.(*attrprefix.PrefixCacheMatchInfo)
@@ -476,7 +476,7 @@ func TestPrefixPluginChatCompletionsMultimodalDifferentUrlPartialMatch(t *testin
 			},
 		},
 	}
-	_ = p.Produce(context.Background(), req1, endpoints)
+	_ = p.Produce(context.Background(), req1, nil, endpoints)
 	state1, _ := plugin.ReadPluginStateKey[*SchedulingContextState](p.PluginState(), req1.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
 	initialHashCount := len(state1.PrefixHashes)
 	assert.Greater(t, initialHashCount, 0)
@@ -511,7 +511,7 @@ func TestPrefixPluginChatCompletionsMultimodalDifferentUrlPartialMatch(t *testin
 			},
 		},
 	}
-	_ = p.Produce(context.Background(), req2, endpoints)
+	_ = p.Produce(context.Background(), req2, nil, endpoints)
 	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(ApproxPrefixCachePluginType).String()
 	info, _ := endpoint1.Get(key)
 	prefixInfo := info.(*attrprefix.PrefixCacheMatchInfo)
@@ -551,7 +551,7 @@ func TestPrefixPluginChatCompletionsMultimodalSameImageContentMatches(t *testing
 			},
 		},
 	}
-	_ = p.Produce(context.Background(), req1, endpoints)
+	_ = p.Produce(context.Background(), req1, nil, endpoints)
 	state1, _ := plugin.ReadPluginStateKey[*SchedulingContextState](p.PluginState(), req1.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
 	initialHashCount := len(state1.PrefixHashes)
 	assert.Greater(t, initialHashCount, 0)
@@ -584,7 +584,7 @@ func TestPrefixPluginChatCompletionsMultimodalSameImageContentMatches(t *testing
 			},
 		},
 	}
-	_ = p.Produce(context.Background(), req2, endpoints)
+	_ = p.Produce(context.Background(), req2, nil, endpoints)
 	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(ApproxPrefixCachePluginType).String()
 	info, _ := endpoint1.Get(key)
 	prefixInfo := info.(*attrprefix.PrefixCacheMatchInfo)
@@ -638,7 +638,7 @@ func TestPrefixPluginChatCompletionsMultimodalPrefixImageContentMatches(t *testi
 			},
 		},
 	}
-	_ = p.Produce(context.Background(), req1, endpoints)
+	_ = p.Produce(context.Background(), req1, nil, endpoints)
 	state1, _ := plugin.ReadPluginStateKey[*SchedulingContextState](p.PluginState(), req1.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
 	initialHashCount := len(state1.PrefixHashes)
 	assert.Greater(t, initialHashCount, 0)
@@ -672,7 +672,7 @@ func TestPrefixPluginChatCompletionsMultimodalPrefixImageContentMatches(t *testi
 			},
 		},
 	}
-	_ = p.Produce(context.Background(), req2, endpoints)
+	_ = p.Produce(context.Background(), req2, nil, endpoints)
 	key := attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(ApproxPrefixCachePluginType).String()
 	info, _ := endpoint1.Get(key)
 	prefixInfo := info.(*attrprefix.PrefixCacheMatchInfo)
@@ -714,7 +714,7 @@ func TestPrefixPluginAutoTune(t *testing.T) {
 	}
 	p, _ := newDataProducer(context.Background(), ApproxPrefixCachePluginType, config, testHandle())
 
-	_ = p.Produce(context.Background(), req, endpoints)
+	_ = p.Produce(context.Background(), req, nil, endpoints)
 	state, _ := plugin.ReadPluginStateKey[*SchedulingContextState](p.PluginState(), req.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
 	// 1024 chars / (128 tokens * 4 chars/token) = 2 blocks
 	assert.Equal(t, 2, len(state.PrefixHashes), "Should use pod block size (128 tokens) -> 2 body blocks")
@@ -761,7 +761,7 @@ func TestMaxPrefixTokensToMatch(t *testing.T) {
 		},
 	}
 
-	err = p.Produce(context.Background(), req, []fwksched.Endpoint{endpoint})
+	err = p.Produce(context.Background(), req, nil, []fwksched.Endpoint{endpoint})
 	assert.NoError(t, err)
 
 	state, err := plugin.ReadPluginStateKey[*SchedulingContextState](p.PluginState(), req.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
@@ -788,7 +788,7 @@ func TestMaxPrefixTokensToMatch(t *testing.T) {
 		},
 	}
 
-	err = p2.Produce(context.Background(), req2, []fwksched.Endpoint{endpoint})
+	err = p2.Produce(context.Background(), req2, nil, []fwksched.Endpoint{endpoint})
 	assert.NoError(t, err)
 
 	state2, err := plugin.ReadPluginStateKey[*SchedulingContextState](p2.PluginState(), req2.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
@@ -908,7 +908,7 @@ func BenchmarkPrefixPluginStress(b *testing.B) {
 
 			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				_ = p.Produce(context.Background(), req, endpoints)
+				_ = p.Produce(context.Background(), req, nil, endpoints)
 				p.PluginState().Delete(req.RequestID)
 			}
 		})
@@ -991,7 +991,7 @@ func TestPrefixPluginGenerateRequest(t *testing.T) {
 		},
 	}
 
-	err = p.Produce(context.Background(), req, endpoints)
+	err = p.Produce(context.Background(), req, nil, endpoints)
 	assert.NoError(t, err)
 
 	state, err := plugin.ReadPluginStateKey[*SchedulingContextState](p.PluginState(), req.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
@@ -1040,10 +1040,10 @@ func TestPrefixPluginGenerateMatchesSameTokens(t *testing.T) {
 		},
 	}
 
-	_ = p.Produce(context.Background(), req1, endpoints)
+	_ = p.Produce(context.Background(), req1, nil, endpoints)
 	state1, _ := plugin.ReadPluginStateKey[*SchedulingContextState](p.PluginState(), req1.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
 
-	_ = p.Produce(context.Background(), req2, endpoints)
+	_ = p.Produce(context.Background(), req2, nil, endpoints)
 	state2, _ := plugin.ReadPluginStateKey[*SchedulingContextState](p.PluginState(), req2.RequestID, plugin.StateKey(ApproxPrefixCachePluginType))
 
 	assert.Equal(t, state1.PrefixHashes, state2.PrefixHashes, "identical token IDs must produce identical hashes")

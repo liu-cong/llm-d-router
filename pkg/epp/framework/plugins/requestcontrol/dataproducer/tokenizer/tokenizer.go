@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/llm-d/llm-d-router/pkg/common/observability/logging"
+	fwkdl "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/datalayer"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/requestcontrol"
 	fwkrh "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/requesthandling"
@@ -174,7 +175,7 @@ func (p *Plugin) Produces() map[plugin.DataKey]any {
 // Returns an error when tokenization fails; the caller (Director) decides the
 // policy (currently: log and continue). If the request already carries a
 // TokenizedPrompt, tokenization is skipped.
-func (p *Plugin) Produce(ctx context.Context, request *scheduling.InferenceRequest, _ []scheduling.Endpoint) error {
+func (p *Plugin) Produce(ctx context.Context, request *scheduling.InferenceRequest, _ []fwkdl.Endpoint, _ []scheduling.Endpoint) error {
 	tp, err := p.tokenize(ctx, request)
 	if err != nil {
 		return err

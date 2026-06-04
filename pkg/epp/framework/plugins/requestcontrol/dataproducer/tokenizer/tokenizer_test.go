@@ -124,7 +124,7 @@ func TestProduce_PopulatesTokenizedPrompt(t *testing.T) {
 			},
 		},
 	}
-	require.NoError(t, p.Produce(context.Background(), req, nil))
+	require.NoError(t, p.Produce(context.Background(), req, nil, nil))
 	require.NotNil(t, req.Body.TokenizedPrompt)
 	assert.Equal(t, []uint32{1, 2, 3, 4}, req.Body.TokenizedPrompt.TokenIDs)
 	require.Len(t, req.Body.TokenizedPrompt.MultiModalFeatures, 2)
@@ -142,14 +142,14 @@ func TestProduce_SkipsWhenAlreadyPopulated(t *testing.T) {
 	req := &scheduling.InferenceRequest{
 		Body: &fwkrh.InferenceRequestBody{TokenizedPrompt: existing},
 	}
-	require.NoError(t, p.Produce(context.Background(), req, nil))
+	require.NoError(t, p.Produce(context.Background(), req, nil, nil))
 	assert.Same(t, existing, req.Body.TokenizedPrompt)
 }
 
 func TestProduce_NilBody(t *testing.T) {
 	p := newTestPlugin(&mockTokenizer{})
 	req := &scheduling.InferenceRequest{}
-	err := p.Produce(context.Background(), req, nil)
+	err := p.Produce(context.Background(), req, nil, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "request body is nil")
 }
@@ -168,7 +168,7 @@ func TestProduce_TokenizerError(t *testing.T) {
 			},
 		},
 	}
-	err := p.Produce(context.Background(), req, nil)
+	err := p.Produce(context.Background(), req, nil, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "tokenization failed")
 	assert.Nil(t, req.Body.TokenizedPrompt)
@@ -179,7 +179,7 @@ func TestProduce_UnsupportedBodyType(t *testing.T) {
 	req := &scheduling.InferenceRequest{
 		Body: &fwkrh.InferenceRequestBody{}, // no Completions or ChatCompletions
 	}
-	err := p.Produce(context.Background(), req, nil)
+	err := p.Produce(context.Background(), req, nil, nil)
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unsupported request body type")
 	assert.Nil(t, req.Body.TokenizedPrompt)
@@ -208,7 +208,7 @@ func TestProduce_GenerateUsesPreTokenizedIDs(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, p.Produce(context.Background(), req, nil))
+	require.NoError(t, p.Produce(context.Background(), req, nil, nil))
 	require.NotNil(t, req.Body.TokenizedPrompt)
 	assert.Equal(t, tokenIDs, req.Body.TokenizedPrompt.TokenIDs)
 	assert.Nil(t, req.Body.TokenizedPrompt.MultiModalFeatures)
@@ -249,7 +249,7 @@ func TestProduce_GenerateFlattensFeatures(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, p.Produce(context.Background(), req, nil))
+	require.NoError(t, p.Produce(context.Background(), req, nil, nil))
 	require.NotNil(t, req.Body.TokenizedPrompt)
 	assert.Equal(t, tokenIDs, req.Body.TokenizedPrompt.TokenIDs)
 	assert.Equal(t,

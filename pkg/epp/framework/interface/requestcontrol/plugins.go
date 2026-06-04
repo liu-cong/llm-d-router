@@ -67,9 +67,11 @@ type ResponseBodyProcessor interface {
 
 // DataProducer is implemented by data producers which produce data from different sources.
 // Produce is called by the director before scheduling requests.
+// originalEndpoints represents the original datalayer endpoints which hold global state.
+// snapshottedEndpoints represents the snapshotted endpoints which are scoped to the current request during the scheduling cycle.
 type DataProducer interface {
 	plugin.ProducerPlugin
-	Produce(ctx context.Context, request *fwksched.InferenceRequest, pods []fwksched.Endpoint) error
+	Produce(ctx context.Context, request *fwksched.InferenceRequest, originalEndpoints []datalayer.Endpoint, snapshottedEndpoints []fwksched.Endpoint) error
 }
 
 // Admitter is called by the director after the data producer and before scheduling.

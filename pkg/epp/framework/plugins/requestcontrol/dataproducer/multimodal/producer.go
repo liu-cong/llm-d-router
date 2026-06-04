@@ -185,7 +185,7 @@ func (p *Producer) PluginState() *plugin.PluginState {
 }
 
 // Produce attaches multimodal encoder-cache match data to endpoints.
-func (p *Producer) Produce(ctx context.Context, request *scheduling.InferenceRequest, endpoints []scheduling.Endpoint) error {
+func (p *Producer) Produce(ctx context.Context, request *scheduling.InferenceRequest, _ []fwkdl.Endpoint, snapshottedEndpoints []scheduling.Endpoint) error {
 	logger := log.FromContext(ctx).V(logging.DEBUG)
 	requestItems := ExtractMMItems(request)
 	if len(requestItems) == 0 {
@@ -198,7 +198,7 @@ func (p *Producer) Produce(ctx context.Context, request *scheduling.InferenceReq
 	if request != nil && request.RequestID != "" {
 		p.pluginState.Write(request.RequestID, plugin.StateKey(ProducerType), &requestState{items: requestItems})
 	}
-	for _, endpoint := range endpoints {
+	for _, endpoint := range snapshottedEndpoints {
 		metadata := endpoint.GetMetadata()
 		if metadata == nil {
 			continue

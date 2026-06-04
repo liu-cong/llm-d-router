@@ -290,7 +290,9 @@ func (d *Director) HandleRequest(ctx context.Context, reqCtx *handlers.RequestCo
 
 	snapshotOfCandidatePods := d.toSchedulerEndpoints(endpointCandidates)
 	// Prepare per request data by running DataProducer plugins.
-	err = d.runDataProducerPlugins(ctx, reqCtx.SchedulingRequest, snapshotOfCandidatePods)
+	// originalEndpoints represents the original datalayer endpoints which hold global state.
+	// snapshottedEndpoints represents the snapshotted endpoints which are scoped to the current request during the scheduling cycle.
+	err = d.runDataProducerPlugins(ctx, reqCtx.SchedulingRequest, endpointCandidates, snapshotOfCandidatePods)
 	if err != nil {
 		// Don't fail the request if DataProducer plugins fail.
 		logger.Error(err, "failed to prepare per request data")
@@ -589,12 +591,15 @@ func (d *Director) runPreAdmissionPlugins(ctx context.Context, request *fwksched
 	return nil
 }
 
+// runDataProducerPlugins runs the registered DataProducer plugins.
+// originalEndpoints is used to store live endpoint states.
+// snapshottedEndpoints is used to store request scoped data.
 func (d *Director) runDataProducerPlugins(ctx context.Context,
-	request *fwksched.InferenceRequest, endpoints []fwksched.Endpoint) error {
+	request *fwksched.InferenceRequest, originalEndpoints []fwkdl.Endpoint, snapshottedEndpoints []fwksched.Endpoint) error {
 	if len(d.requestControlPlugins.dataProducerPlugins) == 0 {
 		return nil
 	}
-	return dataProducerPluginsWithTimeout(ctx, dataProducerTimeout, d.requestControlPlugins.dataProducerPlugins, request, endpoints)
+	return dataProducerPluginsWithTimeout(ctx, dataProducerTimeout, d.requestControlPlugins.dataProducerPlugins, request, originalEndpoints, snapshottedEndpoints)
 }
 
 func (d *Director) runAdmissionPlugins(ctx context.Context,

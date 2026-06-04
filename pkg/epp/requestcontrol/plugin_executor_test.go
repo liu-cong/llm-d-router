@@ -25,6 +25,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	fwkdl "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/datalayer"
 	fwkplugin "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin"
 	fwkrc "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/requestcontrol"
 	fwksched "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/scheduling"
@@ -49,7 +50,7 @@ func (m *executorMockDataProducerPlugin) TypedName() fwkplugin.TypedName {
 	return fwkplugin.TypedName{Type: "mock", Name: m.name}
 }
 
-func (m *executorMockDataProducerPlugin) Produce(ctx context.Context, request *fwksched.InferenceRequest, endpoints []fwksched.Endpoint) error {
+func (m *executorMockDataProducerPlugin) Produce(ctx context.Context, request *fwksched.InferenceRequest, _ []fwkdl.Endpoint, endpoints []fwksched.Endpoint) error {
 	m.executed = true
 	if m.delay > 0 {
 		select {
@@ -78,7 +79,7 @@ func (p *ctxObservingPlugin) TypedName() fwkplugin.TypedName {
 	return fwkplugin.TypedName{Type: "mock", Name: p.name}
 }
 
-func (p *ctxObservingPlugin) Produce(ctx context.Context, _ *fwksched.InferenceRequest, _ []fwksched.Endpoint) error {
+func (p *ctxObservingPlugin) Produce(ctx context.Context, _ *fwksched.InferenceRequest, _ []fwkdl.Endpoint, _ []fwksched.Endpoint) error {
 	defer p.wg.Done()
 	select {
 	case <-time.After(p.block):
@@ -105,6 +106,7 @@ func TestDataProducerPluginsWithTimeout_CancelsPluginContext(t *testing.T) {
 		20*time.Millisecond,
 		[]fwkrc.DataProducer{plugin},
 		&fwksched.InferenceRequest{},
+		nil,
 		nil,
 	)
 	assert.Error(t, err)
@@ -199,7 +201,7 @@ func TestDataProducerPluginsWithTimeout(t *testing.T) {
 			ctx, cancel := tc.ctxFn()
 			defer cancel()
 
-			err := dataProducerPluginsWithTimeout(ctx, tc.timeout, tc.plugins, &fwksched.InferenceRequest{}, nil)
+			err := dataProducerPluginsWithTimeout(ctx, tc.timeout, tc.plugins, &fwksched.InferenceRequest{}, nil, nil)
 
 			if tc.expectSuccess {
 				assert.NoError(t, err)
@@ -223,11 +225,11 @@ type dagTestPlugin struct {
 	mu       sync.Mutex
 }
 
-func (p *dagTestPlugin) Produce(ctx context.Context, request *fwksched.InferenceRequest, endpoints []fwksched.Endpoint) error {
+func (p *dagTestPlugin) Produce(ctx context.Context, request *fwksched.InferenceRequest, originalEndpoints []fwkdl.Endpoint, snapshottedEndpoints []fwksched.Endpoint) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.execTime = time.Now()
-	return p.executorMockDataProducerPlugin.Produce(ctx, request, endpoints)
+	return p.executorMockDataProducerPlugin.Produce(ctx, request, originalEndpoints, snapshottedEndpoints)
 }
 
 func (p *dagTestPlugin) Produces() map[fwkplugin.DataKey]any {
@@ -335,7 +337,7 @@ func TestExecutePluginsAsDAG(t *testing.T) {
 				plugin.execTime = time.Time{}
 			}
 
-			err := executePluginsAsDAG(context.Background(), tc.plugins, &fwksched.InferenceRequest{}, nil)
+			err := executePluginsAsDAG(context.Background(), tc.plugins, &fwksched.InferenceRequest{}, nil, nil)
 
 			if tc.expectErr {
 				assert.Error(t, err)

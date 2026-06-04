@@ -188,13 +188,13 @@ func (p *InFlightLoadProducer) Extract(ctx context.Context, event datalayer.Endp
 	return nil
 }
 
-func (p *InFlightLoadProducer) Produce(_ context.Context, request *fwksched.InferenceRequest, endpoints []fwksched.Endpoint) error {
+func (p *InFlightLoadProducer) Produce(_ context.Context, request *fwksched.InferenceRequest, endpoints []datalayer.Endpoint, snapshottedEndpoints []fwksched.Endpoint) error {
 	var inputTokens int64
 	if request != nil {
 		inputTokens = p.tokenEstimator.EstimateInput(request)
 	}
 
-	for _, e := range endpoints {
+	for _, e := range snapshottedEndpoints {
 		if e == nil || e.GetMetadata() == nil {
 			continue
 		}

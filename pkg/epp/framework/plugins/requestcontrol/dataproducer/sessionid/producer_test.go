@@ -114,7 +114,7 @@ func TestProduce_HeaderMode(t *testing.T) {
 			t.Parallel()
 			req := &fwksched.InferenceRequest{Headers: tc.headers}
 
-			err := producer.Produce(context.Background(), req, nil)
+			err := producer.Produce(context.Background(), req, nil, nil)
 			require.NoError(t, err)
 
 			got, ok := attrsession.ReadSessionID(req)
@@ -179,7 +179,7 @@ func TestProduce_CookieMode(t *testing.T) {
 				Headers: map[string]string{"cookie": tc.cookie},
 			}
 
-			err := producer.Produce(context.Background(), req, nil)
+			err := producer.Produce(context.Background(), req, nil, nil)
 			require.NoError(t, err)
 
 			got, ok := attrsession.ReadSessionID(req)
@@ -197,7 +197,7 @@ func TestProduce_NilRequest(t *testing.T) {
 	t.Parallel()
 
 	producer := mustFactory(t, `{"headerName":"x-session-id"}`)
-	err := producer.Produce(context.Background(), nil, nil)
+	err := producer.Produce(context.Background(), nil, nil, nil)
 	require.NoError(t, err)
 }
 
@@ -207,7 +207,7 @@ func TestProduce_NoSessionDoesNotAllocateStore(t *testing.T) {
 	producer := mustFactory(t, `{"headerName":"x-session-id"}`)
 	req := &fwksched.InferenceRequest{}
 
-	require.NoError(t, producer.Produce(context.Background(), req, nil))
+	require.NoError(t, producer.Produce(context.Background(), req, nil, nil))
 	assert.Empty(t, req.AttributeKeys(), "no extraction should leave the store unallocated")
 }
 

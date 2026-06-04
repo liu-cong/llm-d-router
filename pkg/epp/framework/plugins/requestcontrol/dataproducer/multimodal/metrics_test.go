@@ -77,7 +77,7 @@ func TestProduceRecordsMetrics(t *testing.T) {
 	initialQueries := testutil.ToFloat64(encoderCacheQueriesTotal.WithLabelValues(ProducerType, testName))
 
 	// Produce should call recordItemLookups
-	require.NoError(t, producer.Produce(context.Background(), request, nil))
+	require.NoError(t, producer.Produce(context.Background(), request, nil, nil))
 
 	assert.Equal(t, initialQueries+2, testutil.ToFloat64(encoderCacheQueriesTotal.WithLabelValues(ProducerType, testName)))
 }

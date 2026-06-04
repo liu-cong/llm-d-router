@@ -54,7 +54,7 @@ func TestProduce_CancelledContextDoesNotPublish(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel() // cancel before the plugin runs
 
-	err := pl.Produce(ctx, request, []fwksched.Endpoint{endpoint})
+	err := pl.Produce(ctx, request, nil, []fwksched.Endpoint{endpoint})
 	assert.ErrorIs(t, err, context.Canceled, "should propagate ctx.Err() on cancelled context")
 
 	_, getErr := pl.getPredictedLatencyContextForRequest(request)
@@ -71,7 +71,7 @@ func TestProduce_LiveContextPublishes(t *testing.T) {
 	request := createTestInferenceRequest("live-test", 0, 0)
 	endpoint := createTestEndpoint("pod-a", 0.1, 0, 0)
 
-	err := pl.Produce(context.Background(), request, []fwksched.Endpoint{endpoint})
+	err := pl.Produce(context.Background(), request, nil, []fwksched.Endpoint{endpoint})
 	assert.NoError(t, err)
 
 	_, getErr := pl.getPredictedLatencyContextForRequest(request)

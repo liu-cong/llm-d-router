@@ -62,7 +62,7 @@ func (m *mockDataProducerP) Consumes() fwkplugin.DataDependencies {
 	return fwkplugin.DataDependencies{Required: m.consumes}
 }
 
-func (m *mockDataProducerP) Produce(ctx context.Context, request *fwksched.InferenceRequest, endpoints []fwksched.Endpoint) error {
+func (m *mockDataProducerP) Produce(ctx context.Context, request *fwksched.InferenceRequest, _ []fwkdl.Endpoint, endpoints []fwksched.Endpoint) error {
 	endpoints[0].Put(mockProducedDataKey, &mockProducedDataType{value: 42})
 	return nil
 }
@@ -79,7 +79,7 @@ func (m *typedMockPlugin) TypedName() fwkplugin.TypedName {
 }
 
 func (m *typedMockPlugin) Produces() map[fwkplugin.DataKey]any { return m.produces }
-func (m *typedMockPlugin) Produce(ctx context.Context, request *fwksched.InferenceRequest, endpoints []fwksched.Endpoint) error {
+func (m *typedMockPlugin) Produce(ctx context.Context, request *fwksched.InferenceRequest, _ []fwkdl.Endpoint, endpoints []fwksched.Endpoint) error {
 	return nil
 }
 

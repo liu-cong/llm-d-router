@@ -65,7 +65,7 @@ func TestInFlightLoadProducer_Produce(t *testing.T) {
 	ctx := context.Background()
 	endpoints := []fwksched.Endpoint{newStubSchedulingEndpoint(endpointName)}
 
-	err := producer.Produce(ctx, nil, endpoints)
+	err := producer.Produce(ctx, nil, nil, endpoints)
 	require.NoError(t, err)
 
 	// Verify AttributeMap population
@@ -611,19 +611,19 @@ func TestInFlightLoadProducer_PanicSafety(t *testing.T) {
 	t.Run("Produce", func(t *testing.T) {
 		// 1. Nil Endpoints slice
 		require.NotPanics(t, func() {
-			_ = producer.Produce(ctx, nil, nil)
+			_ = producer.Produce(ctx, nil, nil, nil)
 		})
 
 		// 2. Slice with nil endpoint
 		require.NotPanics(t, func() {
-			_ = producer.Produce(ctx, nil, []fwksched.Endpoint{nil})
+			_ = producer.Produce(ctx, nil, nil, []fwksched.Endpoint{nil})
 		})
 
 		// 3. Endpoint with nil metadata
 		stub := newStubSchedulingEndpoint("nil-meta")
 		stub.metadata = nil
 		require.NotPanics(t, func() {
-			_ = producer.Produce(ctx, nil, []fwksched.Endpoint{stub})
+			_ = producer.Produce(ctx, nil, nil, []fwksched.Endpoint{stub})
 		})
 	})
 

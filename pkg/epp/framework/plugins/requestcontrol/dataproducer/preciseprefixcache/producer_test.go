@@ -160,7 +160,7 @@ func TestProduce_UsesTokenizedPrompt(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, p.Produce(ctx, req, testEndpoints))
+	require.NoError(t, p.Produce(ctx, req, nil, testEndpoints))
 	require.Equal(t, tokens, capturedTokens)
 
 	raw, ok := testEndpoints[0].Get(attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName("test").String())
@@ -197,7 +197,7 @@ func TestProduce_NoTokens_NoOp(t *testing.T) {
 			Completions: &fwkrh.CompletionsRequest{Prompt: fwkrh.Prompt{Raw: "no tokens here"}},
 		},
 	}
-	require.NoError(t, p.Produce(ctx, req, testEndpoints))
+	require.NoError(t, p.Produce(ctx, req, nil, testEndpoints))
 }
 
 // Empty TokenIDs → no-op.
@@ -220,7 +220,7 @@ func TestProduce_EmptyTokenizedPrompt_NoOp(t *testing.T) {
 			TokenizedPrompt: &fwkrh.TokenizedPrompt{TokenIDs: []uint32{}},
 		},
 	}
-	require.NoError(t, p.Produce(ctx, req, testEndpoints))
+	require.NoError(t, p.Produce(ctx, req, nil, testEndpoints))
 }
 
 // Multimodal features flow through to ComputeBlockKeysFromTokens.
@@ -261,7 +261,7 @@ func TestProduce_PassesMMExtraFeatures(t *testing.T) {
 		},
 	}
 
-	require.NoError(t, p.Produce(ctx, req, testEndpoints))
+	require.NoError(t, p.Produce(ctx, req, nil, testEndpoints))
 	require.NotNil(t, captured)
 }
 
@@ -277,8 +277,8 @@ func TestProduce_NoOpPaths(t *testing.T) {
 	}
 	p := newProducerWithIndexer(ctx, idx, &fakeKVBlockScorer{})
 
-	require.NoError(t, p.Produce(ctx, &scheduling.InferenceRequest{RequestID: "x"}, testEndpoints))
-	require.NoError(t, p.Produce(ctx, &scheduling.InferenceRequest{RequestID: "x", Body: &fwkrh.InferenceRequestBody{}}, testEndpoints))
+	require.NoError(t, p.Produce(ctx, &scheduling.InferenceRequest{RequestID: "x"}, nil, testEndpoints))
+	require.NoError(t, p.Produce(ctx, &scheduling.InferenceRequest{RequestID: "x", Body: &fwkrh.InferenceRequestBody{}}, nil, testEndpoints))
 }
 
 // Tokens-only: reject legacy tokenizersPoolConfig at factory time.
@@ -357,7 +357,7 @@ func TestNew_BlockSizeFlowsViaTokenProcessor(t *testing.T) {
 					TokenizedPrompt: &fwkrh.TokenizedPrompt{TokenIDs: tokens},
 				},
 			}
-			require.NoError(t, p.Produce(ctx, req, []scheduling.Endpoint{endpoint}))
+			require.NoError(t, p.Produce(ctx, req, nil, []scheduling.Endpoint{endpoint}))
 
 			raw, ok := endpoint.Get(attrprefix.PrefixCacheMatchInfoDataKey.WithNonEmptyProducerName(name).String())
 			require.True(t, ok)

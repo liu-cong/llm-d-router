@@ -115,7 +115,7 @@ func TestActiveRequestScorer_UsesInFlightLoadProducerLifecycle(t *testing.T) {
 	}
 
 	producer.PreRequest(ctx, req, result)
-	require.NoError(t, producer.Produce(ctx, req, endpoints))
+	require.NoError(t, producer.Produce(ctx, req, nil, endpoints))
 
 	require.Equal(t, int64(1), inFlightRequests(t, podA))
 	require.Equal(t, int64(0), inFlightRequests(t, podB))
@@ -125,7 +125,7 @@ func TestActiveRequestScorer_UsesInFlightLoadProducerLifecycle(t *testing.T) {
 
 	req.SchedulingResult = result
 	producer.ResponseBody(ctx, req, &requestcontrol.Response{EndOfStream: true}, nil)
-	require.NoError(t, producer.Produce(ctx, req, endpoints))
+	require.NoError(t, producer.Produce(ctx, req, nil, endpoints))
 
 	require.Equal(t, int64(0), inFlightRequests(t, podA))
 	require.Equal(t, int64(0), inFlightRequests(t, podB))

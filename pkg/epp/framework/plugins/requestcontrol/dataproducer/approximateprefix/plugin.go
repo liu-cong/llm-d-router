@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	logutil "github.com/llm-d/llm-d-router/pkg/common/observability/logging"
+	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/datalayer"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/requestcontrol"
 	fwksched "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/scheduling"
@@ -165,8 +166,10 @@ func (p *dataProducer) PluginState() *plugin.PluginState {
 }
 
 // Produce is called by the director before scheduling requests.
-func (p *dataProducer) Produce(ctx context.Context, request *fwksched.InferenceRequest, pods []fwksched.Endpoint) error {
-	blockSize := p.GetBlockSize(pods)
+// originalEndpoints is used to store live endpoint states.
+// snapshottedEndpoints is used to store request scoped data.
+func (p *dataProducer) Produce(ctx context.Context, request *fwksched.InferenceRequest, _ []datalayer.Endpoint, snapshottedEndpoints []fwksched.Endpoint) error {
+	blockSize := p.GetBlockSize(snapshottedEndpoints)
 	maxBlocks := p.config.MaxPrefixBlocksToMatch
 	if p.config.MaxPrefixTokensToMatch > 0 && blockSize > 0 {
 		maxBlocks = p.config.MaxPrefixTokensToMatch / blockSize
@@ -175,7 +178,7 @@ func (p *dataProducer) Produce(ctx context.Context, request *fwksched.InferenceR
 	total := len(hashes)
 	prefixCacheServers := p.matchLongestPrefix(ctx, hashes)
 
-	for _, pod := range pods {
+	for _, pod := range snapshottedEndpoints {
 		matchLen := prefixCacheServers[ServerID(pod.GetMetadata().NamespacedName)]
 		pod.Put(p.dk.String(), attrprefix.NewPrefixCacheMatchInfo(matchLen, total, blockSize))
 	}

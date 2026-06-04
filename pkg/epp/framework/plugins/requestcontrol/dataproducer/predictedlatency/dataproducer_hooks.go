@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 
 	logutil "github.com/llm-d/llm-d-router/pkg/common/observability/logging"
+	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/datalayer"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin"
 	"github.com/llm-d/llm-d-router/pkg/epp/framework/interface/requestcontrol"
 	fwksched "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/scheduling"
@@ -34,13 +35,13 @@ var _ requestcontrol.DataProducer = &PredictedLatency{}
 
 // Produce prepares the SLO context for the request, including
 // parsing SLO headers, gathering prefix cache scores, and generating predictions.
-func (pl *PredictedLatency) Produce(ctx context.Context, request *fwksched.InferenceRequest, endpoints []fwksched.Endpoint) error {
+func (pl *PredictedLatency) Produce(ctx context.Context, request *fwksched.InferenceRequest, _ []datalayer.Endpoint, snapshottedEndpoints []fwksched.Endpoint) error {
 	logger := log.FromContext(ctx)
 	predictedLatencyCtx := pl.getOrMakePredictedLatencyContextForRequest(request)
 
 	pl.parseSLOHeaders(ctx, request, predictedLatencyCtx)
 	var prefixCacheScore float64
-	for _, endpoint := range endpoints {
+	for _, endpoint := range snapshottedEndpoints {
 
 		if prefixCacheInfoRaw, ok := endpoint.Get(pl.prefixMatchDataKey.String()); ok {
 			prefixCacheInfo := prefixCacheInfoRaw.(*attrprefix.PrefixCacheMatchInfo)
@@ -66,8 +67,8 @@ func (pl *PredictedLatency) Produce(ctx context.Context, request *fwksched.Infer
 		return nil
 	}
 
-	predictions, err := pl.generatePredictions(ctx, predictedLatencyCtx, endpoints)
-	if err == nil && len(predictions) == len(endpoints) {
+	predictions, err := pl.generatePredictions(ctx, predictedLatencyCtx, snapshottedEndpoints)
+	if err == nil && len(predictions) == len(snapshottedEndpoints) {
 		pl.updateRequestContextWithPredictions(predictedLatencyCtx, predictions)
 
 		// Store predictions in endpoint attributes
