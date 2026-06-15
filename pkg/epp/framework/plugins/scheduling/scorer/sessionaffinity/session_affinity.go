@@ -38,7 +38,8 @@ type parameters struct {
 	// HeaderName overrides the default x-session-token header used to read and
 	// write the session token. When empty the default is used.
 	HeaderName string `json:"headerName"`
-	// ProfileName is the name of the profile this instance is associated with.
+	// ProfileName is the name of the profile this instance is associated with (optional).
+	// When empty, the plugin defaults to the primary (decode) pod.
 	// Used in ResponseHeader to look up the correct target pod from SchedulingResult.
 	ProfileName string `json:"profileName"`
 }
