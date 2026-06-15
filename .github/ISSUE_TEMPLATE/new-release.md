@@ -102,7 +102,7 @@ This document defines the process for releasing llm-d-router.
     git push ${REMOTE} v${MAJOR}.${MINOR}.${PATCH}
     ```
 
-1. Pushing the tag triggers CI action to build and publish the [EPP image] and [sidecar image] to the [ghcr registry].
+1. Pushing the tag triggers CI action to build and publish the EPP image (`ghcr.io/llm-d/llm-d-router-endpoint-picker`) and sidecar image (`ghcr.io/llm-d/llm-d-router-disagg-sidecar`) to the [ghcr registry].
 1. Verify the [CI release workflow] completed successfully before proceeding.
 1. Test the steps in the tagged quickstart guide after the PR merges.
 
@@ -132,8 +132,6 @@ Use the following steps to announce the release.
 
 [repo]: https://github.com/llm-d/llm-d-router
 [ghcr registry]: https://github.com/orgs/llm-d/packages?repo_name=llm-d-router
-[EPP image]: https://github.com/orgs/llm-d/packages/container/package/llm-d-router-endpoint-picker
-[sidecar image]: https://github.com/orgs/llm-d/packages/container/package/llm-d-router-disagg-sidecar
 [new release]: https://github.com/llm-d/llm-d-router/releases/new
 [issue]: https://github.com/llm-d/llm-d-router/issues/new/choose
 [CI release workflow]: https://github.com/llm-d/llm-d-router/actions/workflows/ci-release.yaml
