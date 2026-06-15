@@ -111,8 +111,10 @@ func (s *SessionAffinity) Score(ctx context.Context, request *scheduling.Inferen
 func (s *SessionAffinity) ResponseHeader(ctx context.Context, request *scheduling.InferenceRequest, response *requestcontrol.Response, targetPod *datalayer.EndpointMetadata) {
 	podToWrite := targetPod
 	if s.profileName != "" && request != nil && request.SchedulingResult != nil {
-		if result, ok := request.SchedulingResult.ProfileResults[s.profileName]; ok && len(result.TargetEndpoints) > 0 {
-			podToWrite = result.TargetEndpoints[0].GetMetadata()
+		if result := request.SchedulingResult.ProfileResults[s.profileName]; result != nil && len(result.TargetEndpoints) > 0 && result.TargetEndpoints[0] != nil {
+			if md := result.TargetEndpoints[0].GetMetadata(); md != nil {
+				podToWrite = md
+			}
 		}
 	}
 	sessionutil.WriteResponseHeader(ctx, SessionAffinityType, s.sessionHeader, response, podToWrite)
