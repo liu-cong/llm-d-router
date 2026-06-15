@@ -739,6 +739,18 @@ func TestPluginProcessingLatencies(t *testing.T) {
 					pluginName:     "PluginE",
 					duration:       10 * time.Microsecond,
 				},
+				{
+					extensionPoint: "Admission",
+					pluginType:     "TestAdmitter",
+					pluginName:     "PluginF",
+					duration:       5 * time.Millisecond,
+				},
+				{
+					extensionPoint: "DataProducer",
+					pluginType:     "TestDataProducer",
+					pluginName:     "PluginG",
+					duration:       1 * time.Millisecond,
+				},
 			},
 		},
 	}
