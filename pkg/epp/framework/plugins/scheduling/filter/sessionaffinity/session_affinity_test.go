@@ -51,8 +51,8 @@ func TestSessionAffinity_Filter(t *testing.T) {
 	// valid token whose pod is not among the candidates
 	tokenForMissingPod := base64.StdEncoding.EncodeToString([]byte("pod-missing"))
 
-	sessionAffinityFilter := sessionaffinity.NewSessionAffinity("test-filter", "")
-	customHeaderFilter := sessionaffinity.NewSessionAffinity("test-filter", "x-custom-session")
+	sessionAffinityFilter := sessionaffinity.NewSessionAffinity("test-filter", "", "")
+	customHeaderFilter := sessionaffinity.NewSessionAffinity("test-filter", "x-custom-session", "")
 
 	tests := []struct {
 		name     string
@@ -141,7 +141,7 @@ func TestSessionAffinity_Filter(t *testing.T) {
 
 func TestSessionAffinity_ResponseHeader(t *testing.T) {
 	targetEndpoint := &fwkdl.EndpointMetadata{
-		NamespacedName: k8stypes.NamespacedName{Name: "pod1"},
+		NamespacedName: k8stypes.NamespacedName{Namespace: "default", Name: "pod1"},
 		Address:        "1.2.3.4",
 	}
 
@@ -151,8 +151,10 @@ func TestSessionAffinity_ResponseHeader(t *testing.T) {
 	tests := []struct {
 		name            string
 		sessionHeader   string
+		profileName     string
 		initialResponse *requestcontrol.Response
 		targetPod       *fwkdl.EndpointMetadata
+		request         *scheduling.InferenceRequest
 		wantHeaders     map[string]string
 	}{
 		{
@@ -185,14 +187,38 @@ func TestSessionAffinity_ResponseHeader(t *testing.T) {
 			initialResponse: nil,
 			targetPod:       targetEndpoint,
 		},
+		{
+			name:            "prefill profile lookup",
+			sessionHeader:   "x-session-token-prefill",
+			profileName:     "prefill",
+			initialResponse: &requestcontrol.Response{RequestID: "req-prefill", Headers: make(map[string]string)},
+			targetPod:       targetEndpoint, // passed targetPod is decode pod, should be ignored
+			request: &scheduling.InferenceRequest{
+				RequestID: "req-prefill",
+				SchedulingResult: &scheduling.SchedulingResult{
+					ProfileResults: map[string]*scheduling.ProfileRunResult{
+						"prefill": {
+							TargetEndpoints: []scheduling.Endpoint{
+								scheduling.NewEndpoint(
+									&fwkdl.EndpointMetadata{NamespacedName: k8stypes.NamespacedName{Namespace: "default", Name: "prefill-pod"}},
+									&fwkdl.Metrics{},
+									nil,
+								),
+							},
+						},
+					},
+				},
+			},
+			wantHeaders: map[string]string{"x-session-token-prefill": base64.StdEncoding.EncodeToString([]byte("default/prefill-pod"))},
+		},
 	}
 
 	ctx := utils.NewTestContext(t)
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			s := sessionaffinity.NewSessionAffinity("test-filter", test.sessionHeader)
-			s.ResponseHeader(ctx, nil, test.initialResponse, test.targetPod)
+			s := sessionaffinity.NewSessionAffinity("test-filter", test.sessionHeader, test.profileName)
+			s.ResponseHeader(ctx, test.request, test.initialResponse, test.targetPod)
 
 			if test.initialResponse == nil {
 				return
