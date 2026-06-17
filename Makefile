@@ -55,7 +55,7 @@ GIT_COMMIT_SHA ?= $(shell git rev-parse HEAD 2>/dev/null)
 # Match only root-level release tags (v[0-9]*) so submodule tags don't leak into image versions.
 ROOT_RELEASE_TAG_MATCH ?= v[0-9]*
 BUILD_REF ?= $(shell git describe --tags --match '$(ROOT_RELEASE_TAG_MATCH)' --abbrev=0 2>/dev/null)
-LATENCY_PREDICTOR_TAG ?= $(or $(BUILD_REF),latest)
+LATENCY_PREDICTOR_TAG ?= $(or $(EXTRA_TAG),$(BUILD_REF),latest)
 
 # Host directories for Go module and build caches, bind-mounted into the builder container.
 GO_MOD_CACHE_VOL ?= $(HOME)/.cache/llm-d-gomodcache
