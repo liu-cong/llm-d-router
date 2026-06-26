@@ -93,6 +93,9 @@ jobs:
           mv RELEASE-NOTES.md.new RELEASE-NOTES.md
           git add RELEASE-NOTES.md
 
+          # Remove only the fragments captured from the tagged commit,
+          # not the current main glob which may include post-tag fragments.
+          # The -f guard skips fragments already absent from main.
           for f in "${fragments[@]}"; do
             if [[ -f "$f" ]]; then
               git rm -- "$f"
