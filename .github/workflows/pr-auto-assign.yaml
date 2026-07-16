@@ -1,6 +1,11 @@
 name: Auto-assign PR reviewers and assignee
 
 on:
+  pull_request:
+    types: [opened, ready_for_review, reopened]
+    branches:
+      - main
+      - 'release-*'
   pull_request_target:
     types: [opened, ready_for_review, reopened]
     branches:
