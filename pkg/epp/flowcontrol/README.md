@@ -114,3 +114,5 @@ their justifications, please refer to the detailed documentation within the rele
 5.  **Core Types and Service Contracts (`./types`, `./contracts`)**: These packages define the foundational data
     structures (e.g., `FlowControlRequest`), errors, and service interfaces that decouple the engine from its
     dependencies, following a "Ports and Adapters" architectural style.
+
+<!-- e2e test auto assign -->
