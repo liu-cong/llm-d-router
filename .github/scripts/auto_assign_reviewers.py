@@ -210,64 +210,70 @@ def main():
 
     repo_flag = ["--repo", args.repo] if args.repo else []
 
-    # Get changed files in PR
-    files_json = run_gh_command(["pr", "view", str(args.pr_number)] + repo_flag + ["--json", "files"])
-    files_data = json.loads(files_json)
-    changed_files = [f["path"] for f in files_data.get("files", [])]
+    try:
+        # Get changed files in PR
+        files_json = run_gh_command(["pr", "view", str(args.pr_number)] + repo_flag + ["--json", "files"])
+        files_data = json.loads(files_json)
+        changed_files = [f["path"] for f in files_data.get("files", [])]
 
-    # Parse CODEOWNERS and LEADS.md
-    codeowners_rules = parse_codeowners(args.codeowners_path)
-    maintainers = parse_leads(args.leads_path)
+        # Parse CODEOWNERS and LEADS.md
+        codeowners_rules = parse_codeowners(args.codeowners_path)
+        maintainers = parse_leads(args.leads_path)
 
-    # Pick reviewers and assignee
-    selected_reviewers, selected_assignee = select_reviewers_and_assignee(
-        pr_author=args.pr_author,
-        changed_files=changed_files,
-        codeowners_rules=codeowners_rules,
-        maintainers=maintainers,
-        pr_number=args.pr_number
-    )
+        # Pick reviewers and assignee
+        selected_reviewers, selected_assignee = select_reviewers_and_assignee(
+            pr_author=args.pr_author,
+            changed_files=changed_files,
+            codeowners_rules=codeowners_rules,
+            maintainers=maintainers,
+            pr_number=args.pr_number
+        )
 
-    print(f"PR #{args.pr_number} Author: {args.pr_author}")
-    print(f"Changed files count: {len(changed_files)}")
-    print(f"Selected Reviewers: {selected_reviewers}")
-    print(f"Selected Assignee: {selected_assignee}")
+        print(f"PR #{args.pr_number} Author: {args.pr_author}")
+        print(f"Changed files count: {len(changed_files)}")
+        print(f"Selected Reviewers: {selected_reviewers}")
+        print(f"Selected Assignee: {selected_assignee}")
 
-    if not args.apply:
-        print("Dry-run mode. Use --apply to execute gh pr edit.")
-        return
+        if not args.apply:
+            print("Dry-run mode. Use --apply to execute gh pr edit.")
+            return
 
-    # Fetch current requested reviewers & assignees to remove extras if needed
-    pr_json = run_gh_command(["pr", "view", str(args.pr_number)] + repo_flag + ["--json", "reviewRequests,assignees"])
-    pr_data = json.loads(pr_json)
+        # Fetch current requested reviewers & assignees to remove extras if needed
+        pr_json = run_gh_command(["pr", "view", str(args.pr_number)] + repo_flag + ["--json", "reviewRequests,assignees"])
+        pr_data = json.loads(pr_json)
 
-    current_reviewers = [r.get("login") for r in pr_data.get("reviewRequests", []) if "login" in r]
-    current_teams = [r.get("slug") or r.get("name") for r in pr_data.get("reviewRequests", []) if "slug" in r or "name" in r]
-    current_assignees = [a.get("login") for a in pr_data.get("assignees", []) if "login" in a]
+        current_reviewers = [r.get("login") for r in pr_data.get("reviewRequests", []) if "login" in r]
+        current_teams = [r.get("slug") or r.get("name") for r in pr_data.get("reviewRequests", []) if "slug" in r or "name" in r]
+        current_assignees = [a.get("login") for a in pr_data.get("assignees", []) if "login" in a]
 
-    # Remove reviewers that are not in selected_reviewers, as well as team review requests
-    reviewers_to_remove = [r for r in current_reviewers if r not in selected_reviewers]
-    teams_to_remove = [t for t in current_teams]
+        # Remove reviewers that are not in selected_reviewers, as well as team review requests
+        reviewers_to_remove = [r for r in current_reviewers if r not in selected_reviewers]
+        teams_to_remove = [t for t in current_teams]
 
-    # Apply reviewer changes
-    if selected_reviewers:
-        reviewers_str = ",".join(selected_reviewers)
-        print(f"Adding reviewers: {reviewers_str}")
-        run_gh_command(["pr", "edit", str(args.pr_number)] + repo_flag + ["--add-reviewer", reviewers_str])
+        # Apply reviewer changes
+        if selected_reviewers:
+            reviewers_str = ",".join(selected_reviewers)
+            print(f"Adding reviewers: {reviewers_str}")
+            run_gh_command(["pr", "edit", str(args.pr_number)] + repo_flag + ["--add-reviewer", reviewers_str])
 
-    for r in reviewers_to_remove:
-        print(f"Removing excess reviewer: {r}")
-        run_gh_command(["pr", "edit", str(args.pr_number)] + repo_flag + ["--remove-reviewer", r])
+        for r in reviewers_to_remove:
+            print(f"Removing excess reviewer: {r}")
+            run_gh_command(["pr", "edit", str(args.pr_number)] + repo_flag + ["--remove-reviewer", r])
 
-    for t in teams_to_remove:
-        print(f"Removing team reviewer request: {t}")
-        run_gh_command(["pr", "edit", str(args.pr_number)] + repo_flag + ["--remove-reviewer", t])
+        for t in teams_to_remove:
+            print(f"Removing team reviewer request: {t}")
+            run_gh_command(["pr", "edit", str(args.pr_number)] + repo_flag + ["--remove-reviewer", t])
 
-    # Apply assignee changes
-    if selected_assignee and selected_assignee not in current_assignees:
-        print(f"Assigning owner: {selected_assignee}")
-        run_gh_command(["pr", "edit", str(args.pr_number)] + repo_flag + ["--add-assignee", selected_assignee])
+        # Apply assignee changes
+        if selected_assignee and selected_assignee not in current_assignees:
+            print(f"Assigning owner: {selected_assignee}")
+            run_gh_command(["pr", "edit", str(args.pr_number)] + repo_flag + ["--add-assignee", selected_assignee])
+
+    except Exception as e:
+        print(f"::warning::Auto-assign failed: {e}. Falling back to default GitHub CODEOWNERS behavior.")
+        sys.exit(0)
 
 
 if __name__ == "__main__":
     main()
+
