@@ -1345,6 +1345,18 @@ func TestExtractActivePorts(t *testing.T) {
 			validPorts:    []int{8000, 8001, 8002},
 			expectedPorts: sets.New(8000),
 		},
+		{
+			name: "Legacy GAIE annotation key is ignored",
+			pod: &corev1.Pod{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:        "test-pod",
+					Namespace:   "default",
+					Annotations: map[string]string{"inference.networking.k8s.io/active-ports": "8000"},
+				},
+			},
+			validPorts:    []int{8000, 8001, 8002},
+			expectedPorts: sets.New(8000, 8001, 8002),
+		},
 	}
 
 	for _, tt := range tests {
