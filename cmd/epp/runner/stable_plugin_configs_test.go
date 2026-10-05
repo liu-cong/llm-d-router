@@ -73,7 +73,9 @@ func TestStablePluginConfigs(t *testing.T) {
 				"stable config %s references a plugin that is not at least Beta", file)
 
 			pluginType := strings.TrimSuffix(filepath.Base(file), ".yaml")
-			require.Equal(t, fwkplugin.StabilityStable, fwkplugin.GetPluginStability(pluginType),
+			meta, ok := fwkplugin.RegistryMetadata[pluginType]
+			require.True(t, ok, "stable config %s covers plugin %s which is not in RegistryMetadata", file, pluginType)
+			require.Equal(t, fwkplugin.StabilityStable, meta.Stability,
 				"stable config %s covers plugin %s which is not registered as Stable", file, pluginType)
 		})
 	}

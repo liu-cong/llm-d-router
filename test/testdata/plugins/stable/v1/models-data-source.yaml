@@ -10,6 +10,9 @@ plugins:
     scheme: http
     path: /v1/models
     insecureSkipVerify: true
+    caCertPath: ""
+    clientCertPath: ""
+    clientKeyPath: ""
     interval: 5s
 - type: models-data-extractor
 schedulingProfiles:
