@@ -20,6 +20,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -33,8 +34,8 @@ import (
 const stableConfigsGlob = "../../../test/testdata/plugins/stable/v*/*.yaml"
 
 // TestStablePluginConfigs loads every frozen config under test/testdata/plugins/stable/
-// and fails if one no longer parses, no longer instantiates its plugins, or pulls in a
-// plugin that is not at least Beta.
+// and fails if one no longer parses, no longer instantiates its plugins, references a
+// plugin that is not registered as Stable, or pulls in a plugin that is not at least Beta.
 //
 // These configs are the written-down form of the promise made when a plugin is promoted
 // to Stable: a configuration valid today stays valid for the whole major version. The
@@ -70,6 +71,10 @@ func TestStablePluginConfigs(t *testing.T) {
 
 			require.NoError(t, fwkplugin.ValidatePluginStability(r.PluginHandle, opts.AllowExperimentalPlugins),
 				"stable config %s references a plugin that is not at least Beta", file)
+
+			pluginType := strings.TrimSuffix(filepath.Base(file), ".yaml")
+			require.Equal(t, fwkplugin.StabilityStable, fwkplugin.GetPluginStability(pluginType),
+				"stable config %s covers plugin %s which is not registered as Stable", file, pluginType)
 		})
 	}
 }
