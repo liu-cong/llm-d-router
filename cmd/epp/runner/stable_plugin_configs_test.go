@@ -28,6 +28,7 @@ import (
 	"github.com/llm-d/llm-d-router/pkg/epp/datastore"
 	fwkplugin "github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin"
 	runserver "github.com/llm-d/llm-d-router/pkg/epp/server"
+	"sigs.k8s.io/yaml"
 )
 
 // stableConfigsGlob matches every frozen plugin config, across major versions.
@@ -50,6 +51,13 @@ func TestStablePluginConfigs(t *testing.T) {
 		t.Run(testName(file), func(t *testing.T) {
 			configText, err := os.ReadFile(file)
 			require.NoError(t, err, "failed to read %s", file)
+
+			var header struct {
+				APIVersion string `json:"apiVersion"`
+			}
+			require.NoError(t, yaml.Unmarshal(configText, &header), "failed to parse apiVersion from %s", file)
+			require.Equal(t, "llm-d.ai/v1", header.APIVersion,
+				"stable config %s must use apiVersion llm-d.ai/v1", file)
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
