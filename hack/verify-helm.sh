@@ -177,6 +177,7 @@ test_cases_llm_d_router_standalone["latency-predictor"]="--set router.latencyPre
 test_cases_llm_d_router_standalone["llm-d-router-gateway"]="--set router.inferencePool.create=true --set router.modelServers.matchLabels.app=llm-instance-gateway"
 test_cases_llm_d_router_standalone["agentgateway"]="--set router.proxy.proxyType=agentgateway --set router.modelServers.matchLabels.app=llm-instance-gateway --set router.inferencePool.create=false --set 'router.modelServers.targetPorts[0].number=8000'"
 test_cases_llm_d_router_standalone["proxy-service"]="--set router.modelServers.matchLabels.app=llm-instance-gateway --set router.inferencePool.create=false --set router.proxy.mode=service --set router.proxy.replicas=3"
+test_cases_llm_d_router_standalone["proxy-autoscaling"]="--set router.modelServers.matchLabels.app=llm-instance-gateway --set router.inferencePool.create=false --set router.proxy.mode=service --set router.proxy.autoscaling.enabled=true --set router.proxy.autoscaling.minReplicas=2 --set router.proxy.autoscaling.maxReplicas=6 --set router.proxy.autoscaling.targetCPUUtilizationPercentage=70"
 test_cases_llm_d_router_standalone["agentgateway-service"]="--set router.proxy.proxyType=agentgateway --set router.proxy.mode=service --set router.modelServers.matchLabels.app=llm-instance-gateway --set router.inferencePool.create=false --set 'router.modelServers.targetPorts[0].number=8000'"
 test_cases_llm_d_router_standalone["triton"]="--set router.modelServers.type=triton --set router.modelServers.matchLabels.app=llm-instance-gateway --set router.inferencePool.create=false"
 test_cases_llm_d_router_standalone["tokenizer-python"]="--set router.modelServers.matchLabels.app=llm-instance-gateway --set router.inferencePool.create=false --set router.tokenizer.enabled=true --set router.tokenizer.modelName=test-model"
@@ -217,6 +218,12 @@ for key in "${!test_cases_llm_d_router_standalone[@]}"; do
   if [ "${key}" == "tokenizer-python" ]; then
     if ! grep -q "vllm" "${output_dir}/llm-d-router-standalone/templates/epp.yaml" || ! grep -q "launch" "${output_dir}/llm-d-router-standalone/templates/epp.yaml"; then
       echo "Validation failed: vllm launch not found in rendered output for test: ${key}"
+      exit 1
+    fi
+  fi
+  if [ "${key}" == "proxy-autoscaling" ]; then
+    if ! grep -q "name: release-name-proxy" "${output_dir}/llm-d-router-standalone/templates/epp.yaml" || ! grep -q "kind: HorizontalPodAutoscaler" "${output_dir}/llm-d-router-standalone/templates/epp.yaml"; then
+      echo "Validation failed: proxy HorizontalPodAutoscaler not found in rendered output for test: ${key}"
       exit 1
     fi
   fi
