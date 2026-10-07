@@ -617,6 +617,9 @@ require 'stabilizationWindowSeconds: 300' "${proxy_hpa_out}"
 render_proxy_ok --set router.proxy.autoscaling.targetMemoryUtilizationPercentage=75
 require 'averageUtilization: 75' "${proxy_hpa_out}"
 
+render_proxy_ok --set router.proxy.autoscaling.targetCPUUtilizationPercentage=null --set 'router.proxy.autoscaling.metrics[0].type=Resource' --set 'router.proxy.autoscaling.metrics[0].resource.name=cpu' --set 'router.proxy.autoscaling.metrics[0].resource.target.type=Utilization' --set 'router.proxy.autoscaling.metrics[0].resource.target.averageUtilization=60'
+require 'averageUtilization: 60' "${proxy_hpa_out}"
+
 # Negative validations
 expect_proxy_fail --set router.proxy.mode=sidecar
 expect_proxy_fail --set router.proxy.enabled=false

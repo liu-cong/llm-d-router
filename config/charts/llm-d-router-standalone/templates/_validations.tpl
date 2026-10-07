@@ -87,13 +87,13 @@ standalone validations
   {{- if lt $maxReplicas $minReplicas -}}
     {{- fail ".Values.router.proxy.autoscaling.maxReplicas must be greater than or equal to minReplicas" -}}
   {{- end -}}
-  {{- if hasKey $autoscaling "targetCPUUtilizationPercentage" -}}
+  {{- if and (hasKey $autoscaling "targetCPUUtilizationPercentage") (not (kindIs "invalid" $autoscaling.targetCPUUtilizationPercentage)) -}}
     {{- $cpu := int $autoscaling.targetCPUUtilizationPercentage -}}
     {{- if or (lt $cpu 1) (gt $cpu 100) -}}
       {{- fail ".Values.router.proxy.autoscaling.targetCPUUtilizationPercentage must be between 1 and 100" -}}
     {{- end -}}
   {{- end -}}
-  {{- if hasKey $autoscaling "targetMemoryUtilizationPercentage" -}}
+  {{- if and (hasKey $autoscaling "targetMemoryUtilizationPercentage") (not (kindIs "invalid" $autoscaling.targetMemoryUtilizationPercentage)) -}}
     {{- $mem := int $autoscaling.targetMemoryUtilizationPercentage -}}
     {{- if or (lt $mem 1) (gt $mem 100) -}}
       {{- fail ".Values.router.proxy.autoscaling.targetMemoryUtilizationPercentage must be between 1 and 100" -}}
