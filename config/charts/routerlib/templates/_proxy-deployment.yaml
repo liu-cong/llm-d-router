@@ -13,7 +13,10 @@ metadata:
     {{- include "llm-d-router.labels" . | nindent 4 }}
     {{- include "llm-d-router.proxySelectorLabels" . | nindent 4 }}
 spec:
+  {{- $autoscaling := dig "autoscaling" dict .Values.router.proxy }}
+  {{- if not $autoscaling.enabled }}
   replicas: {{ .Values.router.proxy.replicas | default 2 }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "llm-d-router.proxySelectorLabels" . | nindent 6 }}

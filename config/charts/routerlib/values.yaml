@@ -118,7 +118,18 @@ epp:
 
 # By default no proxy is configured
 proxy:
-  enabled: false    
+  enabled: false
+  # Autoscaling configuration for the proxy Deployment (when mode=service).
+  # When enabled, a HorizontalPodAutoscaler (HPA) resource is created targeting the proxy Deployment.
+  # router.proxy.replicas is ignored when autoscaling is enabled; use minReplicas and maxReplicas.
+  autoscaling:
+    enabled: false
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 80
+    # targetMemoryUtilizationPercentage: 80
+    # behavior: {}
+    # metrics: []
 
 # Tokenizer sidecar. Runs vLLM's `vllm launch render <modelName>` (Python) or
 # `vllm-rs render <modelName>` (Rust) and exposes `/v1/completions/render` and

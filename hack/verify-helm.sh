@@ -567,3 +567,62 @@ if ! grep -q -- 'agentgateway-config-template' "${agentgateway_service_mode_outp
   echo "Agentgateway service mode did not mount the agentgateway config in the proxy Deployment"
   exit 1
 fi
+
+echo "Verifying standalone proxy autoscaling (HPA) rendering and validations..."
+proxy_hpa_out="${TEMP_DIR}/proxy-hpa-render.yaml"
+proxy_hpa_deploy="${TEMP_DIR}/proxy-hpa-deployment.yaml"
+render_proxy() {
+  "${HELM}" template proxy-hpa "${SCRIPT_ROOT}/config/charts/llm-d-router-standalone" \
+    --set router.modelServers.matchLabels.app=test-app \
+    --set router.inferencePool.create=false \
+    --set router.proxy.mode=service \
+    --set router.proxy.autoscaling.enabled=true "$@"
+}
+render_proxy_ok() {
+  render_proxy "$@" > "${proxy_hpa_out}" || { echo "llm-d-router-standalone: proxy render failed: $*"; exit 1; }
+  awk 'BEGIN{RS="---"} (/\nkind: Deployment/ || /^kind: Deployment/) && /name: proxy-hpa-proxy/ {print}' "${proxy_hpa_out}" > "${proxy_hpa_deploy}"
+  [ -s "${proxy_hpa_deploy}" ] || { echo "llm-d-router-standalone: Proxy Deployment not rendered: $*"; exit 1; }
+}
+expect_proxy_fail() {
+  if render_proxy "$@" >/dev/null 2>&1; then echo "llm-d-router-standalone: expected proxy failure for $*"; exit 1; fi
+}
+
+render_proxy_ok --set router.proxy.autoscaling.enabled=false
+require '^  replicas: 2$' "${proxy_hpa_deploy}"
+if grep -q -- 'name: proxy-hpa-proxy' "${proxy_hpa_out}" && grep -A5 -- 'name: proxy-hpa-proxy' "${proxy_hpa_out}" | grep -q 'kind: HorizontalPodAutoscaler'; then
+  echo "llm-d-router-standalone: unexpected proxy HorizontalPodAutoscaler when disabled"
+  exit 1
+fi
+
+render_proxy_ok
+require 'name: proxy-hpa-proxy' "${proxy_hpa_out}"
+require 'kind: HorizontalPodAutoscaler' "${proxy_hpa_out}"
+require 'minReplicas: 1' "${proxy_hpa_out}"
+require 'maxReplicas: 5' "${proxy_hpa_out}"
+require 'averageUtilization: 80' "${proxy_hpa_out}"
+forbid '^  replicas:' "${proxy_hpa_deploy}"
+
+render_proxy_ok --set router.proxy.autoscaling.minReplicas=3 --set router.proxy.autoscaling.maxReplicas=3
+require 'minReplicas: 3' "${proxy_hpa_out}"
+require 'maxReplicas: 3' "${proxy_hpa_out}"
+
+render_proxy_ok --set router.proxy.autoscaling.behavior.scaleDown.stabilizationWindowSeconds=300
+require 'stabilizationWindowSeconds: 300' "${proxy_hpa_out}"
+
+render_proxy_ok --set router.proxy.autoscaling.targetMemoryUtilizationPercentage=75
+require 'averageUtilization: 75' "${proxy_hpa_out}"
+
+# Negative validations
+expect_proxy_fail --set router.proxy.mode=sidecar
+expect_proxy_fail --set router.proxy.enabled=false
+expect_proxy_fail --set router.proxy.autoscaling.minReplicas=5 --set router.proxy.autoscaling.maxReplicas=2
+for v in 0 -1; do
+  expect_proxy_fail --set router.proxy.autoscaling.minReplicas="${v}"
+  expect_proxy_fail --set router.proxy.autoscaling.maxReplicas="${v}"
+done
+for v in 0 101; do
+  expect_proxy_fail --set router.proxy.autoscaling.targetCPUUtilizationPercentage="${v}"
+  expect_proxy_fail --set router.proxy.autoscaling.targetMemoryUtilizationPercentage="${v}"
+done
+
+echo "Proxy autoscaling checks passed for llm-d-router-standalone."
