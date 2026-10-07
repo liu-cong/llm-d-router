@@ -596,10 +596,7 @@ expect_proxy_fail() {
 
 render_proxy_ok --set router.proxy.autoscaling.enabled=false
 require '^  replicas: 2$' "${proxy_hpa_deploy}"
-if grep -q -- 'name: proxy-hpa-proxy' "${proxy_hpa_out}" && grep -A5 -- 'name: proxy-hpa-proxy' "${proxy_hpa_out}" | grep -q 'kind: HorizontalPodAutoscaler'; then
-  echo "llm-d-router-standalone: unexpected proxy HorizontalPodAutoscaler when disabled"
-  exit 1
-fi
+forbid 'kind: HorizontalPodAutoscaler' "${proxy_hpa_out}"
 
 render_proxy_ok
 require 'name: proxy-hpa-proxy' "${proxy_hpa_out}"
