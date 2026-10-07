@@ -268,6 +268,7 @@ In standalone service mode (`router.proxy.mode: service`), the proxy runs as an 
 
 - **Service Mode Required**: Proxy autoscaling is supported only when `router.proxy.mode: service` and `router.proxy.enabled: true`. In `sidecar` mode, the proxy lifecycle and replica count are tied to the EPP pod.
 - **Replica Count Configuration**: When autoscaling is enabled, `router.proxy.replicas` is ignored. Replica counts are managed by `router.proxy.autoscaling.minReplicas` and `router.proxy.autoscaling.maxReplicas`.
+- **Drain and Termination Grace Period**: Envoy drains in-flight connections over a 60-second window (`--drain-time-s 60`). The proxy pod defaults `terminationGracePeriodSeconds: 70` and includes a 5-second `preStop` delay on Kubernetes 1.30+ to allow Service endpoint deregistration before Envoy terminates listeners.
 
 #### Helm Configuration
 

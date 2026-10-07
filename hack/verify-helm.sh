@@ -605,6 +605,7 @@ require 'minReplicas: 1' "${proxy_hpa_out}"
 require 'maxReplicas: 5' "${proxy_hpa_out}"
 require 'averageUtilization: 80' "${proxy_hpa_out}"
 forbid '^  replicas:' "${proxy_hpa_deploy}"
+require 'terminationGracePeriodSeconds: 70' "${proxy_hpa_deploy}"
 
 render_proxy_ok --set router.proxy.autoscaling.minReplicas=3 --set router.proxy.autoscaling.maxReplicas=3
 require 'minReplicas: 3' "${proxy_hpa_out}"
