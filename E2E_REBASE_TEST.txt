@@ -1,1 +1,2 @@
 conflicting line on main branch
+resolved line on rebased PR branch
