@@ -35,7 +35,7 @@ The EPP acts as the routing intelligence engine. Its resource usage scales prima
   - For workloads with longer output lengths (such as 5k output tokens), memory usage can reach **20+ GiB** due to the accumulation of state for concurrent inflight requests.
 
 #### Scaling Modes (Active-Active vs. Active-Passive)
-The EPP's scaling behavior and effectiveness depend on the configured high availability (HA) mode (see [Section 4. High Availability (HA)](#4-high-availability-ha) for full configuration details):
+The EPP's scaling behavior and effectiveness depend on the configured high availability (HA) mode (see [Section 4. High Availability (HA)](#4-high-availability-ha) for full configuration details and Helm snippets):
 
 - **Active-Passive Mode**: Only one EPP replica actively serves Envoy external processing (`ext-proc`) requests at a time, while the others remain in standby.
   - **Sizing Impact**: Scaling the replica count does **not** increase the overall EPP throughput capacity or impact resource sizing, as only the active replica handles requests.
@@ -92,7 +92,27 @@ These were run against 0.9.0 EPP container image.
 
 ## 2. Envoy Proxy Sizing (Standalone Mode)
 
-Standalone mode supports two Envoy proxy topologies. In the default `sidecar` mode, each EPP pod includes one proxy container, so the EPP replica count also determines the proxy replica count. With `router.proxy.mode: service`, the proxy runs in a separate Deployment and Service. Set `router.proxy.replicas` to scale service-mode proxies independently from EPP.
+Standalone mode supports two Envoy proxy topologies:
+- **`sidecar` mode (default, `router.proxy.mode: sidecar`)**: Each EPP pod includes one proxy container, so the EPP replica count also determines the proxy replica count.
+- **`service` mode (`router.proxy.mode: service`)**: The proxy runs in a separate horizontally scalable Deployment and Service, reaching EPP over the EPP Service. Set `router.proxy.replicas` (or enable [Standalone Proxy Autoscaling](#standalone-proxy-autoscaling-service-mode)) to scale service-mode proxies independently from EPP:
+
+```yaml
+router:
+  inferencePool:
+    create: false
+  proxy:
+    mode: service
+    replicas: 3
+    failOpen: true
+```
+
+```bash
+helm install my-standalone-router ./config/charts/llm-d-router-standalone \
+  --set router.modelServers.matchLabels.app=my-vllm-service \
+  --set router.inferencePool.create=false \
+  --set router.proxy.mode=service \
+  --set router.proxy.replicas=3
+```
 
 Sizing each Envoy proxy container depends primarily on the request throughput handled by that replica and the request and response payload size. The `router.proxy.resources` setting applies to each proxy container in either topology.
 
@@ -164,6 +184,20 @@ The router supports multiple High Availability (HA) modes:
    - **Priority Routing (Recommended)**: Available when proxy mode is set to service (`router.proxy.mode: service`). Uses Envoy Priority Routing and outlier detection to route traffic to Primary EPP replicas (Priority 0) and shift traffic to warm Standby EPP replicas (Priority 1) upon primary failure. This reduces failover switchover time to **sub-second** (`< 1s`) while preserving optimized EPP routing. (In GKE Gateway mode, `provider.gke.preferredBackends.enabled: true` provides equivalent primary/standby tiering via GKE Preferred Backends.)
    - **Leader Election with Fail-Open (Default)**: Uses Kubernetes `coordination.k8s.io/Lease` coordination so only the elected leader serves inference extension requests while standby pods remain idle until acquiring the lease. If the active leader fails, fail-open mode prevents dropped requests by routing traffic directly to model servers, but **leader switchover takes 10 to 30 seconds**. During that window while EPP is unavailable, **routing is purely unoptimized** (falling back to basic proxy load balancing without KV-cache, prefix, or load-aware scoring).
 
+### Active-Active Mode
+
+To run multiple EPP replicas concurrently in Active-Active mode, disable leader election by setting `router.epp.flags.ha-enable-leader-election: false`:
+
+```yaml
+router:
+  epp:
+    replicas: 3
+    flags:
+      ha-enable-leader-election: false
+```
+
+See [Scaling Modes (Active-Active vs. Active-Passive)](#scaling-modes-active-active-vs-active-passive) for throughput scaling factors, flow control scope, and plugin compatibility requirements.
+
 ### Priority Routing
 
 Priority Routing is the recommended Active-Passive configuration in standalone service mode (`router.proxy.mode: service`). Unlike lease-based leader election, where leader failover takes 10 to 30 seconds and falls back to unoptimized fail-open routing while EPP is unavailable, Priority Routing keeps standby EPP pods warm and reduces switchover time to **sub-second** (`< 1s`) so requests continue to receive optimized EPP scheduling.
@@ -182,15 +216,34 @@ When priority routing is enabled (`router.proxy.priorityRouting.enabled: true`),
 
 #### Helm Configuration
 
-```yaml
-router:
-  proxy:
-    mode: service
-    priorityRouting:
-      enabled: true
-      primaryReplicas: 1
-      standbyReplicas: 1
-```
+- **Standalone Service Mode (`llm-d-router-standalone`)**:
+
+  ```yaml
+  router:
+    proxy:
+      mode: service
+      priorityRouting:
+        enabled: true
+        primaryReplicas: 1
+        standbyReplicas: 1
+  ```
+
+- **GKE Gateway Preferred Backends (`llm-d-router-gateway`)**:
+
+  In GKE Gateway mode, `provider.gke.preferredBackends.enabled: true` configures equivalent active-passive priority tiers (`PREFERRED` for primary pod ordinals and `DEFAULT` for warm standby pod ordinals) via `GCPBackendPolicy`:
+
+  ```yaml
+  provider:
+    name: gke
+    gke:
+      preferredBackends:
+        enabled: true
+        preferredReplicas: 1
+        defaultReplicas: 1
+        balancingMode: RATE
+        maxRatePerEndpoint: 100
+        capacityScalerPercent: 100
+  ```
 
 #### Tuning Parameters
 
@@ -220,7 +273,9 @@ router:
     flags:
       ha-enable-leader-election: true
   proxy:
-    failOpen: true
+    failOpen: true # Standalone Envoy mode
+  inferencePool:
+    failureMode: FailOpen # Gateway mode
 ```
 
 #### Multi-Replica EPP and `helm --wait`
