@@ -37,8 +37,8 @@ The EPP acts as the routing intelligence engine. Its resource usage scales prima
 #### Scaling Modes (Active-Active vs. Active-Passive)
 The EPP's scaling behavior and effectiveness are highly dependent on the configured high availability (HA) mode (see [Section 4. High Availability (HA)](#4-high-availability-ha) for configuration details):
 
-- **Active-Passive Mode**: Only one EPP replica actively serves Envoy external processing (`ext-proc`) requests at a time, while the others remain in standby.
-  - **Sizing Impact**: Scaling the replica count does **not** increase the overall EPP throughput capacity or impact resource sizing, as only the active replica handles requests.
+- **Active-Passive Mode**: Traffic routes to primary EPP replica(s) serving Envoy external processing (`ext-proc`) requests while standby replicas remain available for failover.
+  - **Sizing Impact**: Scaling standby replicas (or total replica count under single-leader election) does **not** increase the overall EPP throughput capacity or impact resource sizing, as only the active primary replica(s) handle requests.
   - **Failover Trade-off (Priority Routing vs. Leader Election)**: With lease-based leader election, fail-open prevents dropped requests when the active leader fails, but leader switchover takes **10 to 30 seconds** during which EPP is unavailable and routing is purely unoptimized. [Priority Routing](#priority-routing) keeps standby EPP pods warm and reduces switchover time to **sub-second** (`< 1s`), making it the recommended Active-Passive setup.
 - **Active-Active Mode**: Multiple EPP replicas actively share and load-balance incoming requests, providing **near-linear throughput scaling**:
 
