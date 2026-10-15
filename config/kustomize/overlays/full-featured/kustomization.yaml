@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namePrefix: full-router-
+
+resources:
+  - ../../base/gateway
+
+components:
+  - ../../components/scaling/leader-election
+  - ../../components/sidecars/tokenizer-python
+  - ../../components/sidecars/latency-predictor
+  - ../../components/observability/monitoring-prometheus-auth
+  - ../../components/observability/tracing
+  - ../../components/provider/httproute
+  - ../../components/provider/gke
+  - ../../components/provider/gke-grpc
