@@ -349,6 +349,10 @@ post-deploy-test: ## Run post deployment tests
 verify-manifests: kubectl-validate ## Validate deployment manifests.
 	KUBECTL_VALIDATE="$(KUBECTL_VALIDATE)" hack/verify-manifests.sh
 
+.PHONY: verify-kustomize
+verify-kustomize: check-kubectl ## Render and validate Kustomize bases and overlays.
+	hack/verify-kustomize.sh
+
 .PHONY: verify-boilerplate
 verify-boilerplate: ## Check that .go and .sh files carry a copyright notice.
 	hack/copyright.sh verify
