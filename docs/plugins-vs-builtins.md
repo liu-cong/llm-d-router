@@ -94,10 +94,10 @@ pkg/epp/
 ## Registering out-of-tree plugins
 
 An out-of-tree plugin lives in its own Go module and is compiled into a custom
-EPP binary. The binary's `main` package imports the runner
-(`github.com/llm-d/llm-d-router/cmd/epp/runner`) and the plugin framework
-(`github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin`, imported
-as `fwkplugin`), registers its plugin factories, and then calls `Run`.
+EPP binary. Fork the current `main` (`cmd/epp/main.go`), import the plugin
+framework (`github.com/llm-d/llm-d-router/pkg/epp/framework/interface/plugin`,
+imported as `fwkplugin`), and register the custom plugin before running the
+runner.
 
 ### Registration functions
 
@@ -111,40 +111,8 @@ takes a plugin type name, a stability level, and a `FactoryFunc`.
 | `RegisterWithPluginDependencies` | The plugin's parameters name other plugin instances. The `ConfigParserFunc` returns the parsed parameters, and the loader instantiates the referenced plugins first. |
 | `RegisterDeprecated` | The plugin type is scheduled for removal. The loader logs a deprecation warning for each configured instance. |
 
-Use a type name that no in-tree plugin uses. The runner registers in-tree
-plugins after `main` runs its own registrations, and a later registration of
+Use a type name that no in-tree plugin uses, because a later registration of
 the same type name replaces the earlier factory.
-
-### Startup order
-
-`Runner.Run(ctx)` processes plugins in this order:
-
-1. `main` calls `fwkplugin.Register` (or a variant) before `Run`.
-2. Phase one of configuration parsing registers the in-tree plugins and loads
-   the `EndpointPickerConfig`. A config entry whose `type` is not in the
-   registry fails startup.
-3. Phase two calls `loader.InstantiateAndConfigure`, which calls each factory.
-   The factory receives a `*json.Decoder` over the entry's `parameters` with
-   `DisallowUnknownFields` set, so an unknown parameter key fails startup. The
-   decoder is `nil` when the entry has no `parameters`.
-4. `fwkplugin.ValidatePluginStability` rejects any instantiated plugin
-   registered as `StabilityAlpha` unless the EPP runs with
-   `--allow-experimental-plugins`. `StabilityBeta` and `StabilityStable`
-   plugins run without the flag.
-
-### Runner builder methods
-
-`runner.NewRunner()` returns a `*Runner` with these builder methods:
-
-- `WithExecutableName` sets the name printed in the startup version log.
-- `WithCustomCollectors` adds Prometheus collectors to the EPP metrics
-  registry.
-- `WithRequestControlConfig` supplies the request-control configuration. The
-  runner adds the plugins instantiated from the config file to it.
-- `WithSchedulerConfig` has no effect on the running scheduler, because phase
-  two replaces the scheduler configuration with the one built from
-  `schedulingProfiles`. Add scheduling plugins by registering them and
-  referencing them in the `EndpointPickerConfig`.
 
 ### Example
 
@@ -203,8 +171,11 @@ func ConstantScorerFactory(name string, parameters *json.Decoder, _ fwkplugin.Ha
 }
 
 func main() {
+	// Register custom plugins before starting the runner. If registered as
+	// fwkplugin.StabilityAlpha, pass --allow-experimental-plugins at startup.
 	fwkplugin.Register(ConstantScorerType, fwkplugin.StabilityBeta, ConstantScorerFactory)
 
+	// In-tree plugins are registered as part of the runner.
 	if err := runner.NewRunner().WithExecutableName("my-epp").Run(ctrl.SetupSignalHandler()); err != nil {
 		os.Exit(1)
 	}
