@@ -147,7 +147,7 @@ func (ext *Extractor) Extract(ctx context.Context, in fwkdl.PollInput[sourcemetr
 			errs = append(errs, err)
 		} else {
 			clone.WaitingQueueSize = int(value)
-			ep.GetAttributes().Put(attrmetrics.ScalarMetricDataKey(WaitingQueueSizeKey), attrmetrics.ScalarMetricValue(value))
+			putBuiltinScalarAttribute(ep, mapping, WaitingQueueSizeKey, value)
 			updated = true
 		}
 	}
@@ -157,7 +157,7 @@ func (ext *Extractor) Extract(ctx context.Context, in fwkdl.PollInput[sourcemetr
 			errs = append(errs, err)
 		} else {
 			clone.RunningRequestsSize = int(value)
-			ep.GetAttributes().Put(attrmetrics.ScalarMetricDataKey(RunningRequestsSizeKey), attrmetrics.ScalarMetricValue(value))
+			putBuiltinScalarAttribute(ep, mapping, RunningRequestsSizeKey, value)
 			updated = true
 		}
 	}
@@ -167,7 +167,7 @@ func (ext *Extractor) Extract(ctx context.Context, in fwkdl.PollInput[sourcemetr
 			errs = append(errs, err)
 		} else {
 			clone.KVCacheUsagePercent = value
-			ep.GetAttributes().Put(attrmetrics.ScalarMetricDataKey(KVCacheUsagePercentKey), attrmetrics.ScalarMetricValue(value))
+			putBuiltinScalarAttribute(ep, mapping, KVCacheUsagePercentKey, value)
 			updated = true
 		}
 	}
@@ -259,6 +259,17 @@ func (ext *Extractor) Extract(ctx context.Context, in fwkdl.PollInput[sourcemetr
 		return errors.Join(errs...)
 	}
 	return nil
+}
+
+// putBuiltinScalarAttribute writes a built-in scalar metric to the endpoint's
+// attribute map unless a customMetrics entry owns that attributeKey. Skipping
+// the built-in write keeps a failed custom scrape from falling back to the
+// built-in value and overwriting the custom metric's last-known value.
+func putBuiltinScalarAttribute(ep fwkdl.Endpoint, mapping *Mapping, key string, value float64) {
+	if mapping.hasCustomMetric(key) {
+		return
+	}
+	ep.GetAttributes().Put(attrmetrics.ScalarMetricDataKey(key), attrmetrics.ScalarMetricValue(value))
 }
 
 // getEngineTypeFromEndpoint extracts the engine type from endpoint metadata labels.

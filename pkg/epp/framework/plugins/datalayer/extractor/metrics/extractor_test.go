@@ -1343,12 +1343,16 @@ func TestExtractorPublishesBuiltinScalarAttributes(t *testing.T) {
 		assertNoScalarMetric(t, ep, KVCacheUsagePercentKey)
 	})
 
-	t.Run("customMetrics_with_same_attributeKey_overrides_builtin_attribute", func(t *testing.T) {
+	t.Run("customMetrics_with_same_attributeKey_exclusively_owns_attribute", func(t *testing.T) {
 		registry := NewMappingRegistry()
 		mapping, err := NewMappingFromConfig(MappingConfig{
-			Queue: defaultTotalQueuedRequestsMetric,
+			Queue:   defaultTotalQueuedRequestsMetric,
+			Running: defaultTotalRunningRequestsMetric,
+			KVUsage: defaultKvCacheUsagePercentageMetric,
 			CustomMetrics: []CustomMetric{
 				{AttributeKey: WaitingQueueSizeKey, Spec: mustSpec(t, "custom:override_queue")},
+				{AttributeKey: RunningRequestsSizeKey, Spec: mustSpec(t, "custom:override_running"), Optional: true},
+				{AttributeKey: KVCacheUsagePercentKey, Spec: mustSpec(t, "custom:override_kv")},
 			},
 		})
 		if err != nil {
@@ -1363,16 +1367,63 @@ func TestExtractorPublishesBuiltinScalarAttributes(t *testing.T) {
 		}
 
 		ep := fwkdl.NewEndpoint(nil, nil)
-		data := sourcemetrics.PrometheusMetricMap{
-			defaultTotalQueuedRequestsMetric: gaugeFamily(4),
-			"custom:override_queue":          gaugeFamily(9),
+
+		// Scrape 0: built-in metrics succeed while custom metrics are absent.
+		// Legacy Metrics must update, while attributes stay unset because customMetrics owns them.
+		initialMissingCustom := sourcemetrics.PrometheusMetricMap{
+			defaultTotalQueuedRequestsMetric:    gaugeFamily(2),
+			defaultTotalRunningRequestsMetric:   gaugeFamily(1),
+			defaultKvCacheUsagePercentageMetric: gaugeFamily(0.15),
 		}
-		if err := extractor.Extract(t.Context(), fwkdl.PollInput[sourcemetrics.PrometheusMetricMap]{Payload: data, Endpoint: ep}); err != nil {
-			t.Fatalf("Extract() unexpected error: %v", err)
+		if err := extractor.Extract(t.Context(), fwkdl.PollInput[sourcemetrics.PrometheusMetricMap]{Payload: initialMissingCustom, Endpoint: ep}); err == nil {
+			t.Fatal("Extract() expected error when required custom metrics are missing, got nil")
 		}
-		if ep.GetMetrics().WaitingQueueSize != 4 {
-			t.Errorf("GetMetrics().WaitingQueueSize = %d, want 4", ep.GetMetrics().WaitingQueueSize)
+		if got := ep.GetMetrics(); got.WaitingQueueSize != 2 || got.RunningRequestsSize != 1 || got.KVCacheUsagePercent != 0.15 {
+			t.Errorf("GetMetrics() after scrape 0 = (%d, %d, %v), want (2, 1, 0.15)",
+				got.WaitingQueueSize, got.RunningRequestsSize, got.KVCacheUsagePercent)
+		}
+		assertNoScalarMetric(t, ep, WaitingQueueSizeKey)
+		assertNoScalarMetric(t, ep, RunningRequestsSizeKey)
+		assertNoScalarMetric(t, ep, KVCacheUsagePercentKey)
+
+		// Scrape 1: both built-in metrics and overriding custom metrics succeed.
+		bothPresent := sourcemetrics.PrometheusMetricMap{
+			defaultTotalQueuedRequestsMetric:    gaugeFamily(3),
+			defaultTotalRunningRequestsMetric:   gaugeFamily(2),
+			defaultKvCacheUsagePercentageMetric: gaugeFamily(0.25),
+			"custom:override_queue":             gaugeFamily(9),
+			"custom:override_running":           gaugeFamily(7),
+			"custom:override_kv":                gaugeFamily(0.85),
+		}
+		if err := extractor.Extract(t.Context(), fwkdl.PollInput[sourcemetrics.PrometheusMetricMap]{Payload: bothPresent, Endpoint: ep}); err != nil {
+			t.Fatalf("Extract() unexpected error on scrape 1: %v", err)
+		}
+		if got := ep.GetMetrics(); got.WaitingQueueSize != 3 || got.RunningRequestsSize != 2 || got.KVCacheUsagePercent != 0.25 {
+			t.Errorf("GetMetrics() after scrape 1 = (%d, %d, %v), want (3, 2, 0.25)",
+				got.WaitingQueueSize, got.RunningRequestsSize, got.KVCacheUsagePercent)
 		}
 		assertScalarMetric(t, ep, WaitingQueueSizeKey, 9.0)
+		assertScalarMetric(t, ep, RunningRequestsSizeKey, 7.0)
+		assertScalarMetric(t, ep, KVCacheUsagePercentKey, 0.85)
+
+		// Scrape 2: built-in metrics advance while custom metrics fail (missing required,
+		// missing optional, and non-finite NaN). Legacy Metrics must advance to the new
+		// built-in values, while attributes retain the last-known custom values.
+		customFailed := sourcemetrics.PrometheusMetricMap{
+			defaultTotalQueuedRequestsMetric:    gaugeFamily(5),
+			defaultTotalRunningRequestsMetric:   gaugeFamily(4),
+			defaultKvCacheUsagePercentageMetric: gaugeFamily(0.50),
+			"custom:override_kv":                gaugeFamily(math.NaN()),
+		}
+		if err := extractor.Extract(t.Context(), fwkdl.PollInput[sourcemetrics.PrometheusMetricMap]{Payload: customFailed, Endpoint: ep}); err == nil {
+			t.Fatal("Extract() expected error when required custom metrics fail on scrape 2, got nil")
+		}
+		if got := ep.GetMetrics(); got.WaitingQueueSize != 5 || got.RunningRequestsSize != 4 || got.KVCacheUsagePercent != 0.50 {
+			t.Errorf("GetMetrics() after scrape 2 = (%d, %d, %v), want (5, 4, 0.50)",
+				got.WaitingQueueSize, got.RunningRequestsSize, got.KVCacheUsagePercent)
+		}
+		assertScalarMetric(t, ep, WaitingQueueSizeKey, 9.0)
+		assertScalarMetric(t, ep, RunningRequestsSizeKey, 7.0)
+		assertScalarMetric(t, ep, KVCacheUsagePercentKey, 0.85)
 	})
 }
